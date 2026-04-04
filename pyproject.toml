@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ringbrush-coverage"
+version = "0.1.0"
+description = "Convert smart ring toothbrushing logs into a mouth-coverage MP4 visualization."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "Pillow>=10.0",
+  "imageio-ffmpeg>=0.5.1",
+]
+
+[project.scripts]
+ringbrush-coverage = "ringbrush_coverage.cli:main"
+
+[tool.setuptools]
+packages = ["ringbrush_coverage"]
+
