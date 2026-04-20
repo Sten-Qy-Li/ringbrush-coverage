@@ -345,12 +345,12 @@ def estimate_dead_reckoning(samples: list[SensorSample]) -> tuple[float, float]:
         dt = max((curr.t_ms - prev.t_ms) / 1000.0, 1e-3)
         dyn_ax = curr.ax - mean_ax
         dyn_ay = curr.ay - mean_ay
-        velocity_x = (velocity_x * 0.84) + (dyn_ax * dt * 0.10)
-        velocity_y = (velocity_y * 0.84) - (dyn_ay * dt * 0.10)
+        velocity_x = (velocity_x * 0.92) + (dyn_ax * dt * 2.00)
+        velocity_y = (velocity_y * 0.92) - (dyn_ay * dt * 2.00)
         pos_x += velocity_x * dt
         pos_y += velocity_y * dt
-        pos_x += circular_delta(curr.yaw, prev.yaw) * 0.0012
-        pos_y -= (curr.pitch - prev.pitch) * 0.0015
+        pos_x += circular_delta(curr.yaw, prev.yaw) * 0.0015
+        pos_y -= (curr.pitch - prev.pitch) * 0.0000
 
     return float(pos_x), float(pos_y)
 
