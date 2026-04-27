@@ -31,8 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional path for a JSON summary report.",
     )
     parser.add_argument("--fps", type=int, default=2, help="Output video frame rate. Default: 2")
-    parser.add_argument("--width", type=int, default=640, help="Video width in pixels. Default: 640")
-    parser.add_argument("--height", type=int, default=360, help="Video height in pixels. Default: 360")
+    parser.add_argument("--width", type=int, default=1280, help="Video width in pixels. Default: 1280")
+    parser.add_argument("--height", type=int, default=720, help="Video height in pixels. Default: 720")
     parser.add_argument(
         "--target-zone-seconds",
         type=float,

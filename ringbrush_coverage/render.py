@@ -18,14 +18,6 @@ ZONE_POLYGONS = {
     "inner-lower": [(0.23, 0.58), (0.50, 0.68), (0.77, 0.58), (0.69, 0.81), (0.50, 0.92), (0.31, 0.81)],
 }
 
-ZONE_LABEL_POSITIONS = {
-    "outer-left": (0.18, 0.50),
-    "outer-front": (0.50, 0.40),
-    "outer-right": (0.82, 0.50),
-    "inner-upper": (0.50, 0.21),
-    "inner-lower": (0.50, 0.79),
-}
-
 
 @lru_cache(maxsize=None)
 def _load_font(size: int, *, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -126,44 +118,178 @@ def _trail_points(analysis: SessionAnalysis, time_s: float) -> list[tuple[float,
     return points[-12:]
 
 
-def _build_static_base(analysis: SessionAnalysis, width: int, height: int) -> Image.Image:
+def _layout(width: int, height: int) -> dict:
+    """Compute the box geometry for header, sidebar, mouth viz, status pill, and timeline.
+
+    All regions are guaranteed not to overlap. Decoration overhang from the mouth viz
+    (drop shadow + lip arcs) is absorbed into the mouth box's outer margins so the
+    decorations stay clear of every other panel.
+    """
+    short_side = min(width, height)
+    pad = max(20, int(short_side * 0.045))
+    gutter = max(10, int(short_side * 0.022))
+
+    header_top = pad
+    header_height = max(72, int(height * 0.13))
+    header_bottom = header_top + header_height
+
+    timeline_height = max(8, int(height * 0.014))
+    timeline_top = height - pad - timeline_height
+    timing_band_height = max(22, int(height * 0.04))
+
+    pill_height = max(40, int(height * 0.072))
+    pill_bottom = timeline_top - timing_band_height
+    pill_top = pill_bottom - pill_height
+
+    sidebar_width = max(260, int(width * 0.27))
+    sidebar_left = width - pad - sidebar_width
+    sidebar_right = width - pad
+    sidebar_top = header_bottom + gutter
+    sidebar_bottom = pill_top - gutter
+
+    deco_x = max(18, int(short_side * 0.025))
+    deco_top = max(10, int(short_side * 0.014))
+    deco_bottom = max(28, int(short_side * 0.07))
+    mouth_left = pad + deco_x
+    mouth_right = sidebar_left - gutter - deco_x
+    mouth_top = sidebar_top + deco_top
+    mouth_bottom = pill_top - gutter - deco_bottom
+
+    pill_right = max(pad + 280, int(width * 0.42))
+
+    title_x = pad + max(8, int(width * 0.005))
+    title_y = header_top + max(2, int(height * 0.006))
+    subtitle_y = title_y + max(36, int(height * 0.075))
+
+    return {
+        "pad": pad,
+        "gutter": gutter,
+        "title_anchor": (title_x, title_y),
+        "subtitle_anchor": (title_x, subtitle_y),
+        "sidebar_box": (sidebar_left, sidebar_top, sidebar_right, sidebar_bottom),
+        "pill_box": (pad, pill_top, pill_right, pill_bottom),
+        "timeline_box": (pad, timeline_top, width - pad, timeline_top + timeline_height),
+        "timing_text_y": timeline_top - timing_band_height + max(2, int(height * 0.004)),
+        "timing_text_right": width - pad,
+        "mouth_box": (mouth_left, mouth_top, mouth_right, mouth_bottom),
+    }
+
+
+def _coverage_bar_geometry(layout: dict, height: int) -> dict:
+    sleft, stop, sright, sbottom = layout["sidebar_box"]
+    panel_pad = max(14, int(height * 0.025))
+    heading_y = stop + panel_pad
+    heading_height = max(28, int(height * 0.045))
+    panel_inner_top = heading_y + heading_height + max(8, int(height * 0.018))
+    panel_inner_bottom = sbottom - panel_pad
+    bar_thickness = max(10, int(height * 0.025))
+    section_h = (panel_inner_bottom - panel_inner_top) / len(SURFACE_LABELS)
+    return {
+        "panel_pad": panel_pad,
+        "heading_y": heading_y,
+        "heading_height": heading_height,
+        "panel_inner_top": panel_inner_top,
+        "panel_inner_bottom": panel_inner_bottom,
+        "section_h": section_h,
+        "bar_thickness": bar_thickness,
+        "bar_left": sleft + panel_pad,
+        "bar_right": sright - panel_pad,
+    }
+
+
+def _build_static_base(analysis: SessionAnalysis, width: int, height: int, layout: dict) -> Image.Image:
     image = _gradient_background(width, height).copy().convert("RGBA")
     draw = ImageDraw.Draw(image, "RGBA")
-    title_font = _load_font(34, bold=True)
-    body_font = _load_font(18)
-    small_font = _load_font(15)
-    label_font = _load_font(16, bold=True)
 
-    mouth_box = (105, 80, width - 105, height - 120)
+    title_size = max(24, int(height * 0.055))
+    subtitle_size = max(14, int(height * 0.026))
+    panel_label_size = max(15, int(height * 0.030))
+    bar_label_size = max(12, int(height * 0.024))
+
+    title_font = _load_font(title_size, bold=True)
+    subtitle_font = _load_font(subtitle_size)
+    panel_label_font = _load_font(panel_label_size, bold=True)
+    bar_label_font = _load_font(bar_label_size)
+
+    mouth_box = layout["mouth_box"]
     left, top, right, bottom = mouth_box
+    mouth_w = right - left
+    mouth_h = bottom - top
 
-    draw.ellipse((left - 12, top + 26, right + 12, bottom + 50), fill=(78, 24, 18, 35))
-    draw.ellipse(mouth_box, fill=(66, 10, 15, 255), outline=(199, 82, 70, 255), width=8)
-    draw.arc((left - 14, top - 8, right + 14, bottom + 12), start=204, end=336, fill=(245, 171, 149, 190), width=6)
-    draw.arc((left - 16, top + 10, right + 16, bottom + 30), start=24, end=156, fill=(161, 47, 50, 180), width=4)
+    shadow_x = max(6, int(mouth_w * 0.014))
+    shadow_top = max(8, int(mouth_h * 0.06))
+    shadow_bottom = max(20, int(mouth_h * 0.13))
+    arc_top_x = max(8, int(mouth_w * 0.016))
+    arc_top_top = max(4, int(mouth_h * 0.020))
+    arc_top_bottom = max(6, int(mouth_h * 0.030))
+    arc_low_x = max(10, int(mouth_w * 0.019))
+    arc_low_top = max(6, int(mouth_h * 0.025))
+    arc_low_bottom = max(12, int(mouth_h * 0.075))
+    outline_w = max(4, int(mouth_h * 0.018))
+    arc_top_w = max(3, int(mouth_h * 0.014))
+    arc_low_w = max(2, int(mouth_h * 0.010))
 
-    draw.text((48, 26), "Ringbrush Coverage", fill=(42, 42, 42, 255), font=title_font)
+    draw.ellipse(
+        (left - shadow_x, top + shadow_top, right + shadow_x, bottom + shadow_bottom),
+        fill=(78, 24, 18, 35),
+    )
+    draw.ellipse(mouth_box, fill=(66, 10, 15, 255), outline=(199, 82, 70, 255), width=outline_w)
+    draw.arc(
+        (left - arc_top_x, top - arc_top_top, right + arc_top_x, bottom + arc_top_bottom),
+        start=204,
+        end=336,
+        fill=(245, 171, 149, 190),
+        width=arc_top_w,
+    )
+    draw.arc(
+        (left - arc_low_x, top + arc_low_top, right + arc_low_x, bottom + arc_low_bottom),
+        start=24,
+        end=156,
+        fill=(161, 47, 50, 180),
+        width=arc_low_w,
+    )
+
+    title_x, title_y = layout["title_anchor"]
+    draw.text((title_x, title_y), "Ringbrush Coverage", fill=(35, 38, 42, 255), font=title_font)
+    subtitle_x, subtitle_y = layout["subtitle_anchor"]
     subtitle = f"{analysis.source_path.name}  |  calibration: {analysis.calibration_source}"
-    draw.text((48, 66), subtitle, fill=(77, 87, 88, 255), font=body_font)
+    draw.text((subtitle_x, subtitle_y), subtitle, fill=(80, 90, 92, 255), font=subtitle_font)
 
-    draw.rounded_rectangle((48, height - 92, 332, height - 40), radius=18, fill=(255, 255, 255, 185))
+    pill_box = layout["pill_box"]
+    pill_radius = max(14, int((pill_box[3] - pill_box[1]) * 0.45))
+    draw.rounded_rectangle(pill_box, radius=pill_radius, fill=(255, 255, 255, 225))
 
-    progress_left = width - 290
-    progress_top = 84
-    draw.rounded_rectangle((progress_left, progress_top, width - 34, height - 66), radius=24, fill=(255, 255, 255, 195))
-    draw.text((progress_left + 20, progress_top + 16), "Coverage so far", fill=(40, 40, 40, 255), font=label_font)
+    sidebar_box = layout["sidebar_box"]
+    sidebar_radius = max(16, int(height * 0.028))
+    draw.rounded_rectangle(sidebar_box, radius=sidebar_radius, fill=(255, 255, 255, 225))
+
+    bar_geom = _coverage_bar_geometry(layout, height)
+    draw.text(
+        (bar_geom["bar_left"], bar_geom["heading_y"]),
+        "Coverage so far",
+        fill=(35, 40, 44, 255),
+        font=panel_label_font,
+    )
 
     for idx, label in enumerate(SURFACE_LABELS):
-        top_y = progress_top + 58 + (idx * 64)
-        bar_left = progress_left + 20
-        bar_right = width - 58
-        draw.text((bar_left, top_y - 24), DISPLAY_NAMES[label], fill=(51, 59, 60, 255), font=small_font)
-        draw.rounded_rectangle((bar_left, top_y, bar_right, top_y + 18), radius=9, fill=(229, 235, 231, 255))
+        section_top = bar_geom["panel_inner_top"] + (idx * bar_geom["section_h"])
+        bar_top = int(section_top + bar_geom["section_h"] - bar_geom["bar_thickness"] - max(2, int(bar_geom["section_h"] * 0.05)))
+        draw.text(
+            (bar_geom["bar_left"], int(section_top)),
+            DISPLAY_NAMES[label],
+            fill=(60, 68, 70, 255),
+            font=bar_label_font,
+        )
+        draw.rounded_rectangle(
+            (bar_geom["bar_left"], bar_top, bar_geom["bar_right"], bar_top + bar_geom["bar_thickness"]),
+            radius=bar_geom["bar_thickness"] // 2,
+            fill=(229, 235, 231, 255),
+        )
 
-    timeline_left = 48
-    timeline_right = width - 48
-    timeline_top = height - 28
-    draw.rounded_rectangle((timeline_left, timeline_top, timeline_right, timeline_top + 8), radius=4, fill=(215, 222, 221, 255))
+    timeline_box = layout["timeline_box"]
+    timeline_radius = max(2, (timeline_box[3] - timeline_box[1]) // 2)
+    draw.rounded_rectangle(timeline_box, radius=timeline_radius, fill=(215, 222, 221, 255))
+
     return image
 
 
@@ -173,11 +299,17 @@ def _draw_frame(
     width: int,
     height: int,
     base_frame: Image.Image,
+    layout: dict,
 ) -> Image.Image:
     image = base_frame.copy()
     draw = ImageDraw.Draw(image, "RGBA")
-    body_font = _load_font(18)
-    small_font = _load_font(15)
+
+    pill_text_size = max(14, int(height * 0.030))
+    bar_pct_size = max(12, int(height * 0.024))
+    timing_size = max(13, int(height * 0.025))
+    pill_font = _load_font(pill_text_size, bold=True)
+    pct_font = _load_font(bar_pct_size, bold=True)
+    timing_font = _load_font(timing_size)
 
     state = _interpolate_state(analysis, time_s)
     current_ratio = {
@@ -185,8 +317,9 @@ def _draw_frame(
         for label in SURFACE_LABELS
     }
 
-    mouth_box = (105, 80, width - 105, height - 120)
+    mouth_box = layout["mouth_box"]
     left, top, right, bottom = mouth_box
+    mouth_h = bottom - top
 
     for label in SURFACE_LABELS:
         ratio = float(current_ratio[label])
@@ -200,38 +333,75 @@ def _draw_frame(
         (left + (point[0] * (right - left)), top + (point[1] * (bottom - top)))
         for point in trail
     ]
+    trail_w = max(3, int(mouth_h * 0.012))
     for idx in range(1, len(trail_pixels)):
         opacity = int(35 + (idx / max(len(trail_pixels) - 1, 1)) * 120)
-        draw.line((trail_pixels[idx - 1], trail_pixels[idx]), fill=(255, 233, 190, opacity), width=4)
+        draw.line((trail_pixels[idx - 1], trail_pixels[idx]), fill=(255, 233, 190, opacity), width=trail_w)
 
     cursor_x = left + (state["cursor"][0] * (right - left))
     cursor_y = top + (state["cursor"][1] * (bottom - top))
-    _draw_glow(draw, (cursor_x, cursor_y), radius=8)
-    draw.ellipse((cursor_x - 9, cursor_y - 9, cursor_x + 9, cursor_y + 9), fill=(254, 241, 179, 255), outline=(255, 255, 255, 255), width=2)
+    cursor_radius = max(8, int(mouth_h * 0.025))
+    _draw_glow(draw, (cursor_x, cursor_y), radius=cursor_radius)
+    draw.ellipse(
+        (cursor_x - cursor_radius - 1, cursor_y - cursor_radius - 1, cursor_x + cursor_radius + 1, cursor_y + cursor_radius + 1),
+        fill=(254, 241, 179, 255),
+        outline=(255, 255, 255, 255),
+        width=2,
+    )
 
+    pill_box = layout["pill_box"]
+    pleft, ptop, pright, pbottom = pill_box
     dominant_label = state["dominant"]
     dominant_text = f"Current region: {DISPLAY_NAMES.get(dominant_label, dominant_label)}"
-    draw.text((64, height - 80), dominant_text, fill=(35, 46, 47, 255), font=body_font)
+    pill_text_x = pleft + max(18, int((pright - pleft) * 0.06))
+    pill_bbox = draw.textbbox((0, 0), dominant_text, font=pill_font)
+    pill_text_y = ptop + ((pbottom - ptop) - (pill_bbox[3] - pill_bbox[1])) // 2 - 2
+    draw.text((pill_text_x, pill_text_y), dominant_text, fill=(35, 46, 47, 255), font=pill_font)
 
-    progress_left = width - 290
-    progress_top = 84
+    bar_geom = _coverage_bar_geometry(layout, height)
     for idx, label in enumerate(SURFACE_LABELS):
         ratio = float(current_ratio[label])
-        top_y = progress_top + 58 + (idx * 64)
-        bar_left = progress_left + 20
-        bar_right = width - 58
+        section_top = bar_geom["panel_inner_top"] + (idx * bar_geom["section_h"])
+        bar_top = int(section_top + bar_geom["section_h"] - bar_geom["bar_thickness"] - max(2, int(bar_geom["section_h"] * 0.05)))
+        bar_left = bar_geom["bar_left"]
+        bar_right = bar_geom["bar_right"]
+        bar_thickness = bar_geom["bar_thickness"]
         fill_right = bar_left + ((bar_right - bar_left) * ratio)
-        draw.rounded_rectangle((bar_left, top_y, fill_right, top_y + 18), radius=9, fill=(*_mix("#90c8a2", "#4fd284", ratio), 255))
+        if fill_right > bar_left + (bar_thickness // 2):
+            draw.rounded_rectangle(
+                (bar_left, bar_top, fill_right, bar_top + bar_thickness),
+                radius=bar_thickness // 2,
+                fill=(*_mix("#90c8a2", "#3fc278", ratio), 255),
+            )
+        pct_text = f"{int(round(ratio * 100))}%"
+        pct_bbox = draw.textbbox((0, 0), pct_text, font=pct_font)
+        draw.text(
+            (bar_right - (pct_bbox[2] - pct_bbox[0]), int(section_top)),
+            pct_text,
+            fill=(54, 96, 76, 255),
+            font=pct_font,
+        )
 
     total_duration = max(analysis.parsed_session.duration_s, 1e-6)
     progress = max(0.0, min(1.0, time_s / total_duration))
-    timeline_left = 48
-    timeline_right = width - 48
-    timeline_top = height - 28
-    draw.rounded_rectangle((timeline_left, timeline_top, timeline_left + ((timeline_right - timeline_left) * progress), timeline_top + 8), radius=4, fill=(81, 184, 122, 255))
+    tleft, ttop, tright, tbottom = layout["timeline_box"]
+    timeline_radius = max(2, (tbottom - ttop) // 2)
+    fill_right = tleft + ((tright - tleft) * progress)
+    if fill_right > tleft + timeline_radius:
+        draw.rounded_rectangle(
+            (tleft, ttop, fill_right, tbottom),
+            radius=timeline_radius,
+            fill=(81, 184, 122, 255),
+        )
+
     timing = f"{time_s:5.1f}s / {analysis.parsed_session.duration_s:5.1f}s"
-    bbox = draw.textbbox((0, 0), timing, font=small_font)
-    draw.text((timeline_right - bbox[2], timeline_top - 22), timing, fill=(63, 72, 73, 255), font=small_font)
+    timing_bbox = draw.textbbox((0, 0), timing, font=timing_font)
+    draw.text(
+        (layout["timing_text_right"] - timing_bbox[2], layout["timing_text_y"]),
+        timing,
+        fill=(63, 72, 73, 255),
+        font=timing_font,
+    )
 
     return image.convert("RGB")
 
@@ -241,8 +411,8 @@ def render_mp4(
     output_path: Path,
     *,
     fps: int = 2,
-    width: int = 640,
-    height: int = 360,
+    width: int = 1280,
+    height: int = 720,
 ) -> None:
     try:
         import imageio_ffmpeg
@@ -254,7 +424,8 @@ def render_mp4(
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     total_frames = max(1, int(np.ceil(analysis.parsed_session.duration_s * fps)))
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    base_frame = _build_static_base(analysis, width, height)
+    layout = _layout(width, height)
+    base_frame = _build_static_base(analysis, width, height, layout)
 
     command = [
         ffmpeg_path,
@@ -286,7 +457,7 @@ def render_mp4(
     try:
         for frame_idx in range(total_frames):
             time_s = frame_idx / fps
-            frame = _draw_frame(analysis, time_s, width, height, base_frame)
+            frame = _draw_frame(analysis, time_s, width, height, base_frame, layout)
             process.stdin.write(np.asarray(frame, dtype=np.uint8).tobytes())
     finally:
         process.stdin.close()

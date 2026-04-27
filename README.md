@@ -32,7 +32,7 @@ python -m pip install -e .
 
 That installs the CLI entry point `ringbrush-coverage` and the MP4 dependency `imageio-ffmpeg`.
 
-The default export settings are intentionally lightweight for long sessions: `2 FPS` at `640x360`. You can raise `--fps`, `--width`, and `--height` for smoother output, but render time will increase.
+The default export settings render at `1280x720` and `2 FPS`. The layout is a fixed grid (header band, mouth visualization, sidebar with per-zone coverage bars, status pill, timeline) that scales to whatever `--width` and `--height` you pass. You can raise `--fps` for smoother output, but render time will increase.
 
 ## Usage
 
