@@ -1,0 +1,41 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\2026-03-28_0946_full-session.txt",
+  "calibration_source": "calibrated from C:\\MSc-Computer-Science\\Semester-2\\pdss",
+  "duration_seconds": 20952.448,
+  "parsed_rows": 4066,
+  "skipped_rows": 727,
+  "target_zone_seconds": 12.0,
+  "zones": {
+    "outer-left": {
+      "display_name": "Outer left",
+      "coverage_seconds": 1683.006,
+      "coverage_ratio": 1.0,
+      "coverage_percent": 100.0
+    },
+    "outer-front": {
+      "display_name": "Outer front",
+      "coverage_seconds": 2227.857,
+      "coverage_ratio": 1.0,
+      "coverage_percent": 100.0
+    },
+    "outer-right": {
+      "display_name": "Outer right",
+      "coverage_seconds": 2975.154,
+      "coverage_ratio": 1.0,
+      "coverage_percent": 100.0
+    },
+    "inner-upper": {
+      "display_name": "Inner upper",
+      "coverage_seconds": 5921.41,
+      "coverage_ratio": 1.0,
+      "coverage_percent": 100.0
+    },
+    "inner-lower": {
+      "display_name": "Inner lower",
+      "coverage_seconds": 555.886,
+      "coverage_ratio": 1.0,
+      "coverage_percent": 100.0
+    }
+  },
+  "window_count": 201
+}

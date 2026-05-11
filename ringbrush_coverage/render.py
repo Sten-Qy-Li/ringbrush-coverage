@@ -410,7 +410,7 @@ def render_mp4(
     analysis: SessionAnalysis,
     output_path: Path,
     *,
-    fps: int = 2,
+    fps: int = 30,
     width: int = 1280,
     height: int = 720,
 ) -> None:
