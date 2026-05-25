@@ -1,0 +1,45 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-04-20_1000_inside-and-outside-and-inside-and-outside-and.txt",
+  "duration_seconds": 14.099,
+  "samples": 1094,
+  "skipped_rows": 3,
+  "heuristic": {
+    "points": 1094,
+    "duration_s": 14.099,
+    "path_length": 14.660878379535577,
+    "end_displacement": 0.10311138355535891,
+    "x_range": [
+      -0.048903075522122634,
+      2.3567891750145713
+    ],
+    "y_range": [
+      -1.212998966023843,
+      0.1660561987657981
+    ],
+    "bbox_diag": 2.772931364427415
+  },
+  "aeolus": {
+    "points": 1094,
+    "duration_s": 14.099,
+    "path_length": 3.353037121708883,
+    "end_displacement": 3.326927880098321,
+    "x_range": [
+      -0.15449072974191047,
+      0.0110601870450433
+    ],
+    "y_range": [
+      -3.323338943562531,
+      0.0
+    ],
+    "bbox_diag": 3.3274598179164117
+  },
+  "ratios": {
+    "path_length_aeolus_over_heuristic": 0.2287064277396386,
+    "bbox_diag_aeolus_over_heuristic": 1.1999791486377094
+  },
+  "artifacts": {
+    "png": "outputs\\2026-05-11_dr-comparison\\2026-04-20_1000_inside-and-outside-and-inside-and-outside-and_dr-compare.png",
+    "mp4": null,
+    "json": "outputs\\2026-05-11_dr-comparison\\2026-04-20_1000_inside-and-outside-and-inside-and-outside-and_dr-compare.json"
+  }
+}

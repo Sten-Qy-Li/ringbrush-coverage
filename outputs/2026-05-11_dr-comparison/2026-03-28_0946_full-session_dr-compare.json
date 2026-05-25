@@ -1,0 +1,45 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-03-28_0946_full-session.txt",
+  "duration_seconds": 61.719,
+  "samples": 4784,
+  "skipped_rows": 9,
+  "heuristic": {
+    "points": 4784,
+    "duration_s": 61.719,
+    "path_length": 109.73513399099693,
+    "end_displacement": 1.6835137198873857,
+    "x_range": [
+      -19.894018364759244,
+      15.724629341994618
+    ],
+    "y_range": [
+      -1.3102954865568823,
+      22.39275715815156
+    ],
+    "bbox_diag": 42.78460902165242
+  },
+  "aeolus": {
+    "points": 4784,
+    "duration_s": 61.719,
+    "path_length": 7.114033799346666,
+    "end_displacement": 3.325991309502692,
+    "x_range": [
+      -0.5805558810908993,
+      2.192505162805259
+    ],
+    "y_range": [
+      -2.5010276491793757,
+      0.0
+    ],
+    "bbox_diag": 3.7343013878280056
+  },
+  "ratios": {
+    "path_length_aeolus_over_heuristic": 0.06482913485056051,
+    "bbox_diag_aeolus_over_heuristic": 0.08728141902472807
+  },
+  "artifacts": {
+    "png": "outputs\\2026-05-11_dr-comparison\\2026-03-28_0946_full-session_dr-compare.png",
+    "mp4": null,
+    "json": "outputs\\2026-05-11_dr-comparison\\2026-03-28_0946_full-session_dr-compare.json"
+  }
+}

@@ -4,7 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
-from ringbrush_coverage.core import DISPLAY_NAMES, SURFACE_LABELS, analysis_report, analyze_session
+from ringbrush_coverage.core import (
+    DISPLAY_NAMES,
+    DR_METHODS,
+    SURFACE_LABELS,
+    analysis_report,
+    analyze_session,
+)
 from ringbrush_coverage.render import render_mp4
 
 
@@ -41,6 +47,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--window-size", type=int, default=80, help="Samples per analysis window. Default: 80")
     parser.add_argument("--window-step", type=int, default=20, help="Samples between windows. Default: 20")
+    parser.add_argument(
+        "--dr-method",
+        choices=DR_METHODS,
+        default="heuristic",
+        help=(
+            "Dead-reckoning method: 'heuristic' (in-house mean-subtraction "
+            "integrator) or 'aeolus' (Radeta 2023 pipeline). Default: heuristic."
+        ),
+    )
     parser.add_argument(
         "--report-only",
         action="store_true",
@@ -84,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         window_size=args.window_size,
         window_step=args.window_step,
         target_zone_seconds=args.target_zone_seconds,
+        dr_method=args.dr_method,
     )
     report = analysis_report(analysis)
 

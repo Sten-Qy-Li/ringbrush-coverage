@@ -61,6 +61,36 @@ python -m ringbrush_coverage "..\2026-03-28_0946_full-session.txt" `
 ringbrush-coverage "..\2026-03-28_0946_full-session.txt" --calibration-dir ".."
 ```
 
+### Choose a dead-reckoning method
+
+The cursor's motion comes from a dead-reckoning pass over the accelerometer
+stream. Two methods ship in the box:
+
+- `heuristic` (default) — in-house damped integrator that subtracts each window's
+  mean accelerometer reading as a gravity proxy and produces a small per-window
+  nudge in normalized [0, 1] visualization space.
+- `aeolus` — a faithful port of the Radeta-2023 AEOLUS pipeline (Earth-frame
+  gravity removal from roll/pitch, Algorithm 1 ZVU drift reduction, and the
+  heading-projected position update from equation 9). Returns metres, then is
+  rescaled per-session to a comparable visualization magnitude.
+
+```powershell
+ringbrush-coverage "..\2026-03-28_0946_full-session.txt" --dr-method aeolus
+```
+
+### Compare both dead-reckoning methods side-by-side
+
+`tools/compare_dead_reckoning.py` runs both methods on the same log and emits a
+JSON stats summary, a side-by-side PNG, and an animated MP4:
+
+```powershell
+python tools\compare_dead_reckoning.py `
+  "..\recordings\2026-03-28_0946_full-session.txt" `
+  --output-dir .\outputs\2026-05-11_dr-comparison
+```
+
+Add `--skip-mp4` to get just the JSON + PNG (much faster on long sessions).
+
 ## Calibration data
 
 If `--calibration-dir` is supplied, the app looks for these labeled file patterns in that directory:

@@ -1,0 +1,45 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-04-20_0958_left-and-right-and-left-and-right-and.txt",
+  "duration_seconds": 10.163,
+  "samples": 790,
+  "skipped_rows": 0,
+  "heuristic": {
+    "points": 790,
+    "duration_s": 10.163,
+    "path_length": 23.748805717695074,
+    "end_displacement": 0.20480141086559403,
+    "x_range": [
+      -0.02403999043230595,
+      1.340320248395536
+    ],
+    "y_range": [
+      0.0,
+      3.5733557960924394
+    ],
+    "bbox_diag": 3.8249641183626544
+  },
+  "aeolus": {
+    "points": 790,
+    "duration_s": 10.163,
+    "path_length": 1.6349254925924641,
+    "end_displacement": 1.1991293433755168,
+    "x_range": [
+      -0.3339607895148655,
+      0.032740231961673784
+    ],
+    "y_range": [
+      -1.1516863171935343,
+      0.0
+    ],
+    "bbox_diag": 1.208656697479786
+  },
+  "ratios": {
+    "path_length_aeolus_over_heuristic": 0.0688424298900341,
+    "bbox_diag_aeolus_over_heuristic": 0.3159916433404802
+  },
+  "artifacts": {
+    "png": "outputs\\2026-05-11_dr-comparison\\2026-04-20_0958_left-and-right-and-left-and-right-and_dr-compare.png",
+    "mp4": "outputs\\2026-05-11_dr-comparison\\2026-04-20_0958_left-and-right-and-left-and-right-and_dr-compare.mp4",
+    "json": "outputs\\2026-05-11_dr-comparison\\2026-04-20_0958_left-and-right-and-left-and-right-and_dr-compare.json"
+  }
+}

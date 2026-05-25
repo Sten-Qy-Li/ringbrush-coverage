@@ -1,0 +1,45 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-04-12_2127_up-and-down-and-up-and-down-and.txt",
+  "duration_seconds": 14.656,
+  "samples": 1139,
+  "skipped_rows": 0,
+  "heuristic": {
+    "points": 1139,
+    "duration_s": 14.656,
+    "path_length": 30.189908428966515,
+    "end_displacement": 0.22236580376805476,
+    "x_range": [
+      -0.009209394567361057,
+      2.0699539703008405
+    ],
+    "y_range": [
+      -0.40471410675627306,
+      1.7138619427010415
+    ],
+    "bbox_diag": 2.9683808339133684
+  },
+  "aeolus": {
+    "points": 1139,
+    "duration_s": 14.656,
+    "path_length": 1.5465967795285072,
+    "end_displacement": 1.3366778345560217,
+    "x_range": [
+      0.0,
+      0.7078228319699748
+    ],
+    "y_range": [
+      -1.140054539480873,
+      0.0
+    ],
+    "bbox_diag": 1.341915613758533
+  },
+  "ratios": {
+    "path_length_aeolus_over_heuristic": 0.0512289324483205,
+    "bbox_diag_aeolus_over_heuristic": 0.4520698956236748
+  },
+  "artifacts": {
+    "png": "outputs\\2026-05-11_dr-comparison\\2026-04-12_2127_up-and-down-and-up-and-down-and_dr-compare.png",
+    "mp4": null,
+    "json": "outputs\\2026-05-11_dr-comparison\\2026-04-12_2127_up-and-down-and-up-and-down-and_dr-compare.json"
+  }
+}

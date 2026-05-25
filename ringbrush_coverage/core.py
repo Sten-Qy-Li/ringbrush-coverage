@@ -142,6 +142,7 @@ class SessionAnalysis:
     coverage_seconds: dict[str, float]
     coverage_ratio: dict[str, float]
     target_zone_seconds: float
+    dr_method: str = "heuristic"
 
 
 @dataclass(frozen=True)
@@ -355,6 +356,189 @@ def estimate_dead_reckoning(samples: list[SensorSample]) -> tuple[float, float]:
     return float(pos_x), float(pos_y)
 
 
+# ---------------------------------------------------------------------------
+# Radeta 2023 ("AEOLUS") dead reckoning, ported from §3.3–3.6 of
+# "Lost in the Deep? Performance Evaluation of Dead Reckoning Techniques in
+#  Underwater Environments" (Radeta et al., ACM IMWUT 2023).
+# ---------------------------------------------------------------------------
+
+AEOLUS_GRAVITY = 9.81
+AEOLUS_ZVU_THRESHOLD = 0.05
+AEOLUS_ZVU_DECAY_XY = 0.55
+AEOLUS_ZVU_DECAY_Z = 0.80
+
+
+def _gravity_in_body_frame(roll_deg: float, pitch_deg: float, gravity: float = AEOLUS_GRAVITY) -> np.ndarray:
+    # Assumes ZYX intrinsic Tait-Bryan Euler convention with world +z up. If
+    # the device uses a different convention there will be residual gravity
+    # after subtraction, which manifests as faster drift in the integrated
+    # trajectory.
+    r = math.radians(roll_deg)
+    p = math.radians(pitch_deg)
+    return np.array(
+        [-math.sin(p), math.cos(p) * math.sin(r), math.cos(p) * math.cos(r)],
+        dtype=float,
+    ) * gravity
+
+
+def estimate_dead_reckoning_aeolus(
+    samples: list[SensorSample],
+    *,
+    gravity: float = AEOLUS_GRAVITY,
+    zvu_threshold: float = AEOLUS_ZVU_THRESHOLD,
+    zvu_decay_xy: float = AEOLUS_ZVU_DECAY_XY,
+    zvu_decay_z: float = AEOLUS_ZVU_DECAY_Z,
+) -> tuple[float, float]:
+    """Per-window dead reckoning via the Radeta-2023 AEOLUS pipeline.
+
+    Pipeline (faithful to §3.3–3.6 of the paper):
+      1. Linear acceleration in body frame: subtract the expected gravity
+         vector (derived from roll & pitch under the ZYX convention) from
+         the raw accelerometer reading.
+      2. Drift reduction (Algorithm 1, transcribed literally as printed in
+         the paper): if |a_axis| < threshold then v_axis *= decay, else
+         v_axis = a_axis * dt. The else branch is a replacement, not an
+         accumulation; this is almost certainly a typo in the paper but the
+         caller explicitly asked for a faithful port.
+      3. Position via equation 9: x_i = dx*cos(yaw) + x_{i-1},
+                                  y_i = dy*sin(yaw) + y_{i-1}.
+
+    Returns the cumulative (pos_x, pos_y) in metres relative to the first
+    sample of the window.
+    """
+    if len(samples) < 2:
+        return 0.0, 0.0
+
+    vel_x = 0.0
+    vel_y = 0.0
+    vel_z = 0.0
+    pos_x = 0.0
+    pos_y = 0.0
+
+    for prev, curr in zip(samples, samples[1:]):
+        dt = max((curr.t_ms - prev.t_ms) / 1000.0, 1e-3)
+
+        g_body = _gravity_in_body_frame(curr.roll, curr.pitch, gravity)
+        a_lin_x = curr.ax - g_body[0]
+        a_lin_y = curr.ay - g_body[1]
+        a_lin_z = curr.az - g_body[2]
+
+        if abs(a_lin_x) < zvu_threshold:
+            vel_x = vel_x * zvu_decay_xy
+        else:
+            vel_x = a_lin_x * dt
+        if abs(a_lin_y) < zvu_threshold:
+            vel_y = vel_y * zvu_decay_xy
+        else:
+            vel_y = a_lin_y * dt
+        if abs(a_lin_z) < zvu_threshold:
+            vel_z = vel_z * zvu_decay_z
+        else:
+            vel_z = a_lin_z * dt
+
+        dx_body = vel_x * dt
+        dy_body = vel_y * dt
+
+        yaw_rad = math.radians(curr.yaw)
+        pos_x += dx_body * math.cos(yaw_rad)
+        pos_y += dy_body * math.sin(yaw_rad)
+
+    return float(pos_x), float(pos_y)
+
+
+@dataclass(frozen=True)
+class TrajectoryPoint:
+    t_s: float
+    x: float
+    y: float
+
+
+def trajectory_heuristic(samples: list[SensorSample]) -> list[TrajectoryPoint]:
+    """Full-session trajectory using the heuristic DR per-step logic.
+
+    Unlike `estimate_dead_reckoning` (which is windowed and resets state per
+    window), this runs once across all samples and emits a point per sample.
+    Used by the DR comparison tool, where we want a continuous path rather
+    than a sequence of independent window displacements.
+    """
+    if len(samples) < 2:
+        return [TrajectoryPoint(0.0, 0.0, 0.0)] if samples else []
+
+    mean_ax = float(np.mean([sample.ax for sample in samples]))
+    mean_ay = float(np.mean([sample.ay for sample in samples]))
+    velocity_x = 0.0
+    velocity_y = 0.0
+    pos_x = 0.0
+    pos_y = 0.0
+    t0_ms = samples[0].t_ms
+    points: list[TrajectoryPoint] = [TrajectoryPoint(0.0, 0.0, 0.0)]
+
+    for prev, curr in zip(samples, samples[1:]):
+        dt = max((curr.t_ms - prev.t_ms) / 1000.0, 1e-3)
+        dyn_ax = curr.ax - mean_ax
+        dyn_ay = curr.ay - mean_ay
+        velocity_x = (velocity_x * 0.92) + (dyn_ax * dt * 2.00)
+        velocity_y = (velocity_y * 0.92) - (dyn_ay * dt * 2.00)
+        pos_x += velocity_x * dt
+        pos_y += velocity_y * dt
+        pos_x += circular_delta(curr.yaw, prev.yaw) * 0.0015
+        points.append(TrajectoryPoint((curr.t_ms - t0_ms) / 1000.0, float(pos_x), float(pos_y)))
+
+    return points
+
+
+def trajectory_aeolus(
+    samples: list[SensorSample],
+    *,
+    gravity: float = AEOLUS_GRAVITY,
+    zvu_threshold: float = AEOLUS_ZVU_THRESHOLD,
+    zvu_decay_xy: float = AEOLUS_ZVU_DECAY_XY,
+    zvu_decay_z: float = AEOLUS_ZVU_DECAY_Z,
+) -> list[TrajectoryPoint]:
+    """Full-session trajectory using the AEOLUS DR per-step logic."""
+    if len(samples) < 2:
+        return [TrajectoryPoint(0.0, 0.0, 0.0)] if samples else []
+
+    vel_x = 0.0
+    vel_y = 0.0
+    vel_z = 0.0
+    pos_x = 0.0
+    pos_y = 0.0
+    t0_ms = samples[0].t_ms
+    points: list[TrajectoryPoint] = [TrajectoryPoint(0.0, 0.0, 0.0)]
+
+    for prev, curr in zip(samples, samples[1:]):
+        dt = max((curr.t_ms - prev.t_ms) / 1000.0, 1e-3)
+
+        g_body = _gravity_in_body_frame(curr.roll, curr.pitch, gravity)
+        a_lin_x = curr.ax - g_body[0]
+        a_lin_y = curr.ay - g_body[1]
+        a_lin_z = curr.az - g_body[2]
+
+        if abs(a_lin_x) < zvu_threshold:
+            vel_x = vel_x * zvu_decay_xy
+        else:
+            vel_x = a_lin_x * dt
+        if abs(a_lin_y) < zvu_threshold:
+            vel_y = vel_y * zvu_decay_xy
+        else:
+            vel_y = a_lin_y * dt
+        if abs(a_lin_z) < zvu_threshold:
+            vel_z = vel_z * zvu_decay_z
+        else:
+            vel_z = a_lin_z * dt
+
+        dx_body = vel_x * dt
+        dy_body = vel_y * dt
+
+        yaw_rad = math.radians(curr.yaw)
+        pos_x += dx_body * math.cos(yaw_rad)
+        pos_y += dy_body * math.sin(yaw_rad)
+        points.append(TrajectoryPoint((curr.t_ms - t0_ms) / 1000.0, float(pos_x), float(pos_y)))
+
+    return points
+
+
 def build_calibration_from_directory(
     calibration_dir: Path,
     window_size: int,
@@ -484,6 +668,20 @@ def coverage_ratio(coverage_seconds: dict[str, float], target_zone_seconds: floa
     }
 
 
+DR_METHODS = ("heuristic", "aeolus")
+AEOLUS_NORMALIZATION_TARGET_P90 = 0.35
+
+
+def _select_dr_function(dr_method: str):
+    if dr_method == "heuristic":
+        return estimate_dead_reckoning
+    if dr_method == "aeolus":
+        return estimate_dead_reckoning_aeolus
+    raise ValueError(
+        f"Unknown dr_method {dr_method!r}; expected one of {DR_METHODS}."
+    )
+
+
 def analyze_session(
     input_path: Path,
     calibration_dir: Path | None = None,
@@ -491,6 +689,7 @@ def analyze_session(
     window_size: int = 80,
     window_step: int = 20,
     target_zone_seconds: float = 12.0,
+    dr_method: str = "heuristic",
 ) -> SessionAnalysis:
     parsed = parse_sensor_log(input_path)
     if len(parsed.samples) < 2:
@@ -498,13 +697,27 @@ def analyze_session(
 
     calibration = choose_calibration(input_path, calibration_dir, window_size, window_step)
     windows = iter_windows(parsed.samples, window_size, window_step)
+    dr_func = _select_dr_function(dr_method)
+
+    # AEOLUS returns metric meters, the heuristic returns visualization-space
+    # units calibrated to a P90 around 0.35. Rescale AEOLUS per-session so the
+    # downstream cursor perturbation lives on the same scale and the +/-0.18
+    # clamps don't permanently saturate. The heuristic path stays untouched.
+    raw_dr_values = [dr_func(window) for window in windows]
+    if dr_method == "aeolus":
+        magnitudes = [abs(component) for pair in raw_dr_values for component in pair]
+        scale = float(np.percentile(magnitudes, 90)) if magnitudes else 0.0
+        factor = (AEOLUS_NORMALIZATION_TARGET_P90 / scale) if scale > 1e-6 else 0.0
+        dr_values = [(dx * factor, dy * factor) for dx, dy in raw_dr_values]
+    else:
+        dr_values = raw_dr_values
 
     smoothed_probabilities: dict[str, float] | None = None
     cumulative_coverage = {label: 0.0 for label in SURFACE_LABELS}
     cursor = ZONE_ANCHORS["idle"]
     prediction_windows: list[WindowPrediction] = []
 
-    for window_samples in windows:
+    for window_samples, (dead_x, dead_y) in zip(windows, dr_values):
         vector, metrics = feature_vector(window_samples)
         raw_probabilities, confidence = calibration.classify(vector, metrics["activity"])
         smoothed_probabilities = smooth_probabilities(
@@ -513,7 +726,6 @@ def analyze_session(
             metrics["activity"],
         )
 
-        dead_x, dead_y = estimate_dead_reckoning(window_samples)
         anchor_x, anchor_y = weighted_anchor(smoothed_probabilities)
         target_x = clamp(anchor_x + clamp(dead_x * 0.38, -0.18, 0.18), 0.08, 0.92)
         target_y = clamp(anchor_y + clamp(dead_y * 0.38, -0.16, 0.16), 0.10, 0.90)
@@ -552,6 +764,7 @@ def analyze_session(
         coverage_seconds=cumulative_coverage,
         coverage_ratio=coverage_ratio(cumulative_coverage, target_zone_seconds),
         target_zone_seconds=target_zone_seconds,
+        dr_method=dr_method,
     )
 
 
@@ -559,6 +772,7 @@ def analysis_report(analysis: SessionAnalysis) -> dict[str, object]:
     return {
         "input_file": str(analysis.source_path),
         "calibration_source": analysis.calibration_source,
+        "dr_method": analysis.dr_method,
         "duration_seconds": round(analysis.parsed_session.duration_s, 3),
         "parsed_rows": analysis.parsed_session.metadata.parsed_rows,
         "skipped_rows": analysis.parsed_session.metadata.skipped_rows,
