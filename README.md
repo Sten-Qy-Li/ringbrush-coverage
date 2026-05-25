@@ -1,28 +1,8 @@
 # ringbrush-coverage
 
-**ringbrush-coverage** is a Python-based project for visualizing toothbrushing coverage from smart ring motion data. The app reads sensor logs in the format `t_ms, roll, pitch, yaw, ax, ay, az`, applies dead reckoning and motion analysis, and generates an MP4 video of a mouth outline. Areas that are brushed correctly are highlighted in green, with stronger color showing better coverage. This project is developed for the University of Tartu course *Pervasive Data Science Seminar*.
+Turn a smart-ring sensor log into an MP4 that shows where someone brushed their teeth. The video renders a stylized mouth, a dead-reckoned brush cursor with a short motion trail, and per-zone coverage bars that fill as each surface is brushed. Built for the University of Tartu *Pervasive Data Science Seminar*.
 
-## What the app does
-
-- Parses noisy smart-ring log files that may include boot messages, repeated headers, malformed lines, or truncated trailing rows.
-- Learns region prototypes from labeled `*-only.txt` sessions such as `outer-front-only`, `inner-upper-only`, and `no-movement-idle`.
-- Uses windowed motion features plus a damped dead-reckoning path estimate to infer where brushing is happening over time.
-- Accumulates weighted coverage for each mouth region and renders an MP4 with a moving brush cursor, trail, and per-zone progress bars.
-- Falls back to bundled default calibration values that were derived from the provided sample recordings.
-
-## Project layout
-
-```text
-ringbrush_coverage/
-  __main__.py
-  cli.py
-  core.py
-  render.py
-tests/
-  test_core.py
-```
-
-## Installation
+## Install
 
 From the repository root:
 
@@ -30,99 +10,75 @@ From the repository root:
 python -m pip install -e .
 ```
 
-That installs the CLI entry point `ringbrush-coverage` and the MP4 dependency `imageio-ffmpeg`.
+This installs the `ringbrush-coverage` CLI and its `imageio-ffmpeg` dependency.
 
-The default export settings render at `1280x720` and `30 FPS`. The layout is a fixed grid (header band, mouth visualization, sidebar with per-zone coverage bars, status pill, timeline) that scales to whatever `--width` and `--height` you pass. Lower `--fps` if you want a faster render, at the cost of smoothness.
+## Generate a video from a sensor log
 
-## Usage
+### 1. Have a sensor log ready
 
-### Analyze a full brushing session and render MP4
+A log is plain-text CSV with seven columns: `t_ms, roll, pitch, yaw, ax, ay, az`. Header rows, boot messages, malformed lines, and non-monotonic timestamps are tolerated and skipped. Angles are degrees, accelerations are m/s², and the expected ring sample rate is ~80 Hz.
 
-From [ringbrush-coverage](C:/MSc-Computer-Science/Semester-2/pdss/ringbrush-coverage), using the labeled sample recordings in the parent `pdss` folder:
+### 2. (Optional) Point at labeled calibration logs
 
-```powershell
-python -m ringbrush_coverage "..\2026-03-28_0946_full-session.txt" `
-  --calibration-dir ".." `
-  --output ".\outputs\full-session-coverage.mp4" `
-  --summary-json ".\outputs\full-session-coverage.json"
+If you have one-region-at-a-time recordings, pass `--calibration-dir <folder>`. The region classifier is rebuilt when these six filename patterns are all present in that folder:
+
+```
+*outer-front-only*.txt   *inner-upper-only*.txt
+*outer-left-only*.txt    *inner-lower-only*.txt
+*outer-right-only*.txt   *no-movement-idle*.txt
 ```
 
-### Analyze without rendering video
+If any are missing, the app falls back to bundled defaults derived from the original sample recordings.
+
+### 3. Run the CLI
 
 ```powershell
-python -m ringbrush_coverage "..\2026-03-28_0946_full-session.txt" `
-  --calibration-dir ".." `
-  --report-only
+ringbrush-coverage "C:/path/to/session.txt" `
+  --calibration-dir "C:/path/to/labeled-logs" `
+  --output ".\outputs\session.mp4" `
+  --summary-json ".\outputs\session.json"
 ```
 
-### Use the installed console script
+Or equivalently via the module entry point:
 
 ```powershell
-ringbrush-coverage "..\2026-03-28_0946_full-session.txt" --calibration-dir ".."
+python -m ringbrush_coverage "C:/path/to/session.txt" `
+  --output ".\outputs\session.mp4"
 ```
 
-### Choose a dead-reckoning method
+Default render: **1280x720 at 30 FPS**. Override with `--width`, `--height`, `--fps`. Lower `--fps` for faster renders at the cost of smoothness.
 
-The cursor's motion comes from a dead-reckoning pass over the accelerometer
-stream. Two methods ship in the box:
+### 4. Read the outputs
 
-- `heuristic` (default) — in-house damped integrator that subtracts each window's
-  mean accelerometer reading as a gravity proxy and produces a small per-window
-  nudge in normalized [0, 1] visualization space.
-- `aeolus` — a faithful port of the Radeta-2023 AEOLUS pipeline (Earth-frame
-  gravity removal from roll/pitch, Algorithm 1 ZVU drift reduction, and the
-  heading-projected position update from equation 9). Returns metres, then is
-  rescaled per-session to a comparable visualization magnitude.
+- **`session.mp4`** — mouth map with green intensity rising with accumulated coverage, a brush cursor, a short motion trail, and live per-zone coverage bars.
+- **`session.json`** — parsed-row and skipped-row counts, session duration, calibration source, weighted coverage seconds and 0–100% coverage per zone.
+
+## Other useful flags
+
+- `--report-only` — skip the MP4 and just write the JSON + print the per-zone summary. Much faster for sanity checks.
+- `--dr-method aeolus` — replace the default in-house heuristic dead reckoning with a port of the Radeta-2023 AEOLUS pipeline (Earth-frame gravity removal from roll/pitch, Algorithm 1 ZVU drift reduction, heading-projected position update). Returns metres internally and is rescaled per-session to the same visualization range as the heuristic.
+
+## Compare both dead-reckoning methods on one log
 
 ```powershell
-ringbrush-coverage "..\2026-03-28_0946_full-session.txt" --dr-method aeolus
+python tools\compare_dead_reckoning.py "C:/path/to/session.txt" `
+  --output-dir .\outputs\dr-comparison
 ```
 
-### Compare both dead-reckoning methods side-by-side
+Emits a side-by-side PNG, a JSON stats summary, and an animated MP4. Add `--skip-mp4` for just the PNG + JSON.
 
-`tools/compare_dead_reckoning.py` runs both methods on the same log and emits a
-JSON stats summary, a side-by-side PNG, and an animated MP4:
+## How the coverage map is built
 
-```powershell
-python tools\compare_dead_reckoning.py `
-  "..\recordings\2026-03-28_0946_full-session.txt" `
-  --output-dir .\outputs\2026-05-11_dr-comparison
-```
+For each ~1-second window the app:
 
-Add `--skip-mp4` to get just the JSON + PNG (much faster on long sessions).
-
-## Calibration data
-
-If `--calibration-dir` is supplied, the app looks for these labeled file patterns in that directory:
-
-- `*outer-front-only*.txt`
-- `*outer-left-only*.txt`
-- `*outer-right-only*.txt`
-- `*inner-upper-only*.txt`
-- `*inner-lower-only*.txt`
-- `*no-movement-idle*.txt`
-
-If every label is present, the region model is rebuilt from those sessions. Otherwise the app uses bundled defaults derived from the sample logs you provided.
-
-## Output
-
-The JSON summary includes:
-
-- parsed row count and skipped noisy rows
-- session duration
-- calibration source
-- weighted coverage seconds per mouth region
-- coverage percentages per mouth region
-
-The MP4 shows:
-
-- a stylized mouth map
-- green intensity increasing with accumulated coverage
-- a dead-reckoned brush cursor and short motion trail
-- live coverage bars for each toothbrushing region
+1. Extracts orientation, acceleration, and angular-speed features.
+2. Classifies the window into a region (`outer-front`, `outer-left`, `outer-right`, `inner-upper`, `inner-lower`, or `idle`).
+3. Dead-reckons a per-window displacement and nudges the cursor.
+4. **Gates coverage accumulation** by the median per-window displacement and acceleration std over the last few windows. Sustained out-of-mouth motion (e.g. demonstration sweeps much wider than a real mouth) still moves the cursor visually but stops adding to the coverage bars. This prevents false-positive coverage when motion is too wild to be real brushing.
+5. Adds the gated, weighted coverage seconds to the dominant zone(s) and converts the totals to 0–100% bars.
 
 ## Notes and limitations
 
-- This is a practical first version tuned to the sample logs in `C:\MSc-Computer-Science\Semester-2\pdss`.
-- The dead reckoning is intentionally damped to control drift, so it should be read as a visual aid rather than a medically precise trajectory.
-- Better accuracy will come from collecting more labeled region sessions and retraining with `--calibration-dir`.
+- Defaults are tuned to the sample recordings under `C:\MSc-Computer-Science\Semester-2\pdss\recordings`. Different rings or unusual brushing styles likely need fresh calibration.
+- Dead reckoning is damped to keep cursor drift bounded — read it as a visual cue, not a medically precise trajectory.
+- Retrain the heuristic dead-reckoning constants with `python tools\calibrate_dead_reckoning.py` after collecting new labeled left-right / up-down / inside-outside motion logs.
