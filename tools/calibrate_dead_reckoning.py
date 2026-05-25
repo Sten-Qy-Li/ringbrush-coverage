@@ -33,15 +33,15 @@ from ringbrush_coverage.core import (
 )
 
 LOGS = {
-    "up-down": Path("C:/MSc-Computer-Science/Semester-2/pdss/2026-04-12_2127_up-and-down-and-up-and-down-and.txt"),
-    "left-right": Path("C:/MSc-Computer-Science/Semester-2/pdss/2026-04-20_0958_left-and-right-and-left-and-right-and.txt"),
-    "inside-outside": Path("C:/MSc-Computer-Science/Semester-2/pdss/2026-04-20_1000_inside-and-outside-and-inside-and-outside-and.txt"),
+    "up-down": Path("C:/MSc-Computer-Science/Semester-2/pdss/recordings/2026-04-12_2127_up-and-down-and-up-and-down-and.txt"),
+    "left-right": Path("C:/MSc-Computer-Science/Semester-2/pdss/recordings/2026-04-20_0958_left-and-right-and-left-and-right-and.txt"),
+    "inside-outside": Path("C:/MSc-Computer-Science/Semester-2/pdss/recordings/2026-04-20_1000_inside-and-outside-and-inside-and-outside-and.txt"),
 }
 
 WINDOW_SIZE = 80
 WINDOW_STEP = 20
 
-CURRENT_PARAMS = dict(damping=0.84, accel_scale=0.10, yaw_contrib=0.0012, pitch_contrib=0.0015)
+CURRENT_PARAMS = dict(damping=0.92, accel_scale=2.00, yaw_contrib=0.0015, pitch_contrib=0.0000)
 
 
 def dead_reckoning(
@@ -104,10 +104,10 @@ def evaluate(
 ) -> tuple[float, dict[str, dict[str, float]]]:
     """Return (loss, metrics).
 
-    Loss encodes three goals:
-      * up-down  -> dr_y P90 near 0.35, dr_x P90 small
-      * left-right -> dr_x P90 near 0.35, dr_y P90 small
-      * inside-outside -> both bounded (around 0.15), no wild excursions
+    Loss encodes four goals (with stronger emphasis on the two pure-axis logs):
+      * up-down       -> dr_y P90 near 0.35, dr_x P90 small, dr_y/dr_x >= 3.5
+      * left-right    -> dr_x P90 near 0.35, dr_y P90 small, dr_x/dr_y >= 3.5
+      * inside-outside-> both bounded (around 0.15), no wild excursions
       * no file's max should exceed 0.55 (clamp is 0.47/0.42 after 0.38 scale)
     """
     metrics: dict[str, dict[str, float]] = {}
@@ -120,18 +120,28 @@ def evaluate(
     target = 0.35
     cross_target = 0.10
     moderate = 0.15
+    dominance_target = 3.5
 
     ud = metrics["up-down"]
     lr = metrics["left-right"]
     io = metrics["inside-outside"]
 
     loss = 0.0
-    loss += (ud["y_p90"] - target) ** 2 * 4.0
-    loss += (ud["x_p90"] - cross_target) ** 2 * 2.0
-    loss += (lr["x_p90"] - target) ** 2 * 4.0
-    loss += (lr["y_p90"] - cross_target) ** 2 * 2.0
+    # Up-down and left-right carry double the weight now (8.0 / 4.0 instead of
+    # 4.0 / 2.0). Inside-outside is the moderate-motion check and stays at 1.0.
+    loss += (ud["y_p90"] - target) ** 2 * 8.0
+    loss += (ud["x_p90"] - cross_target) ** 2 * 4.0
+    loss += (lr["x_p90"] - target) ** 2 * 8.0
+    loss += (lr["y_p90"] - cross_target) ** 2 * 4.0
     loss += (io["x_p90"] - moderate) ** 2 * 1.0
     loss += (io["y_p90"] - moderate) ** 2 * 1.0
+
+    # Dominance ratio: penalize when the principal axis isn't at least 3.5x
+    # the cross axis. Hinge loss, so well-separated parameter sets pay nothing.
+    ud_ratio = ud["y_p90"] / max(ud["x_p90"], 1e-6)
+    lr_ratio = lr["x_p90"] / max(lr["y_p90"], 1e-6)
+    loss += max(0.0, dominance_target - ud_ratio) ** 2 * 0.5
+    loss += max(0.0, dominance_target - lr_ratio) ** 2 * 0.5
 
     for m in metrics.values():
         for key in ("x_max", "y_max"):
@@ -144,10 +154,10 @@ def evaluate(
 def grid_search(windows_by_label: dict[str, list[list[SensorSample]]]) -> tuple[dict[str, float], dict]:
     best = (math.inf, None, None)
 
-    damping_grid = [0.88, 0.90, 0.91, 0.92, 0.93, 0.94]
-    accel_grid = [1.4, 1.6, 1.8, 2.0, 2.2, 2.5, 2.8, 3.2]
-    yaw_grid = [0.0008, 0.0012, 0.0015, 0.0018, 0.0022, 0.0028]
-    pitch_grid = [0.0, 0.0005, 0.001, 0.002, 0.003, 0.005]
+    damping_grid = [0.86, 0.88, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95]
+    accel_grid = [1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0]
+    yaw_grid = [0.0005, 0.0008, 0.0010, 0.0012, 0.0015, 0.0018, 0.0022, 0.0028, 0.0035]
+    pitch_grid = [0.0, 0.0003, 0.0006, 0.0010, 0.0015, 0.0020, 0.0030]
 
     for damping in damping_grid:
         for accel in accel_grid:
@@ -200,10 +210,18 @@ def main() -> None:
     print_metrics("New behaviour (P90 and max of |pos_x|, |pos_y|):", new_metrics)
 
     print("\nDesign targets:")
-    print("  * up-down       -> dr_y P90 near 0.35, dr_x P90 near 0.10")
-    print("  * left-right    -> dr_x P90 near 0.35, dr_y P90 near 0.10")
+    print("  * up-down       -> dr_y P90 near 0.35, dr_x P90 near 0.10, dr_y/dr_x >= 3.5")
+    print("  * left-right    -> dr_x P90 near 0.35, dr_y P90 near 0.10, dr_x/dr_y >= 3.5")
     print("  * inside-outside-> both P90 near 0.15")
     print("  * no max above 0.55 (downstream clamps are +/-0.47 on X, +/-0.42 on Y)")
+
+    ud = new_metrics["up-down"]
+    lr = new_metrics["left-right"]
+    ud_ratio = ud["y_p90"] / max(ud["x_p90"], 1e-6)
+    lr_ratio = lr["x_p90"] / max(lr["y_p90"], 1e-6)
+    print("\nDominance ratios on retuned params:")
+    print(f"  up-down    dr_y / dr_x = {ud_ratio:5.2f}")
+    print(f"  left-right dr_x / dr_y = {lr_ratio:5.2f}")
 
 
 if __name__ == "__main__":
