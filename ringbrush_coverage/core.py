@@ -671,6 +671,22 @@ def coverage_ratio(coverage_seconds: dict[str, float], target_zone_seconds: floa
 DR_METHODS = ("heuristic", "aeolus")
 AEOLUS_NORMALIZATION_TARGET_P90 = 0.35
 
+# Motion-amplitude gate parameters. Two orthogonal signals, combined via
+# min() so either one can veto coverage accumulation:
+#   * sustained per-window |dr| (normalized vis units): real brushing
+#     p50 0.06-0.11, demo sweeps p50 0.18-0.20.
+#   * sustained per-window accel_std (m/s^2): real brushing tops at p90
+#     ~3.7, but the most aggressive demo (up-down) sits at p50 ~15. This
+#     catches the wild-shaking case where the heuristic's window-mean
+#     trick cancels |dr| but accel_std remains huge.
+# Both signals use the median over MOTION_GATE_WINDOW windows so an
+# isolated transition spike doesn't suppress coverage.
+MOTION_GATE_WINDOW = 8
+MOTION_GATE_DR_MIDPOINT = 0.15
+MOTION_GATE_DR_SCALE = 0.03
+MOTION_GATE_ACCEL_MIDPOINT = 4.5
+MOTION_GATE_ACCEL_SCALE = 0.8
+
 
 def _select_dr_function(dr_method: str):
     if dr_method == "heuristic":
@@ -716,6 +732,8 @@ def analyze_session(
     cumulative_coverage = {label: 0.0 for label in SURFACE_LABELS}
     cursor = ZONE_ANCHORS["idle"]
     prediction_windows: list[WindowPrediction] = []
+    dr_magnitude_history: list[float] = []
+    accel_std_history: list[float] = []
 
     for window_samples, (dead_x, dead_y) in zip(windows, dr_values):
         vector, metrics = feature_vector(window_samples)
@@ -735,8 +753,20 @@ def analyze_session(
             clamp((cursor[1] * (1.0 - follow)) + (target_y * follow), 0.10, 0.90),
         )
 
+        dr_magnitude_history.append(math.hypot(dead_x, dead_y))
+        if len(dr_magnitude_history) > MOTION_GATE_WINDOW:
+            dr_magnitude_history.pop(0)
+        accel_std_history.append(metrics["accel_std"])
+        if len(accel_std_history) > MOTION_GATE_WINDOW:
+            accel_std_history.pop(0)
+        sustained_dr = float(np.median(dr_magnitude_history))
+        sustained_accel = float(np.median(accel_std_history))
+        gate_dr = sigmoid((MOTION_GATE_DR_MIDPOINT - sustained_dr) / MOTION_GATE_DR_SCALE)
+        gate_accel = sigmoid((MOTION_GATE_ACCEL_MIDPOINT - sustained_accel) / MOTION_GATE_ACCEL_SCALE)
+        motion_gate = min(gate_dr, gate_accel)
+
         duration_s = max(window_samples[-1].t_ms - window_samples[0].t_ms, 0.0) / 1000.0
-        update_weight = duration_s * metrics["activity"] * (0.55 + (0.45 * confidence))
+        update_weight = duration_s * metrics["activity"] * (0.55 + (0.45 * confidence)) * motion_gate
         for label in SURFACE_LABELS:
             cumulative_coverage[label] += update_weight * smoothed_probabilities[label]
 

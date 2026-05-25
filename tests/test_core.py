@@ -106,6 +106,41 @@ class AnalysisTests(unittest.TestCase):
                 self.assertTrue(np.isfinite(component))
 
 
+class MotionGateTests(unittest.TestCase):
+    def _write_log(self, path: Path, samples: list[tuple]) -> None:
+        rows = ["t_ms,roll,pitch,yaw,ax,ay,az"]
+        for row in samples:
+            rows.append(",".join(f"{x:.3f}" for x in row))
+        path.write_text("\n".join(rows), encoding="utf-8")
+
+    def test_large_sustained_sweep_suppresses_coverage(self) -> None:
+        # Two synthetic logs of identical length and identical orientation,
+        # but the "huge" log has accelerometer values an order of magnitude
+        # larger -> per-window |dr| sits well above the gate midpoint, so
+        # the cumulative coverage should be substantially smaller than the
+        # "modest" log.
+        modest = []
+        huge = []
+        for i in range(220):
+            t = i * 12.0
+            sign = 1.0 if (i // 8) % 2 == 0 else -1.0
+            modest.append((t, 210.0, -10.0, 20.0, -2.0, sign * 1.5, 8.5))
+            huge.append((t, 210.0, -10.0, 20.0, -2.0, sign * 18.0, 8.5))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            modest_path = Path(tmpdir) / "modest_outer-front-only.txt"
+            huge_path = Path(tmpdir) / "huge_outer-front-only.txt"
+            self._write_log(modest_path, modest)
+            self._write_log(huge_path, huge)
+            modest_analysis = analyze_session(modest_path)
+            huge_analysis = analyze_session(huge_path)
+
+        modest_total = sum(modest_analysis.coverage_seconds.values())
+        huge_total = sum(huge_analysis.coverage_seconds.values())
+        self.assertGreater(modest_total, 0.0)
+        # Huge sweep should be gated down to a small fraction of modest motion.
+        self.assertLess(huge_total, modest_total * 0.5)
+
+
 class DeadReckoningTests(unittest.TestCase):
     @staticmethod
     def _stationary_samples(n: int = 20) -> list[SensorSample]:
