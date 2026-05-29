@@ -1,0 +1,30 @@
+{
+  "inputs": {
+    "imu_log": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-05-29_2203_full-session-with-video-recording.txt",
+    "video_csv": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-05-29_2203_full-session-with-video-recording_format-3.csv",
+    "landmark": "wrist",
+    "resample_hz": 100.0
+  },
+  "imu_signal": {
+    "samples": 13017,
+    "duration_s": 130.16,
+    "mean": 4.281859378433355,
+    "std": 0.6816564204985472,
+    "min": 0.9477612785291052,
+    "max": 5.885535743171558
+  },
+  "video_signal": {
+    "samples": 12260,
+    "duration_s": 122.59,
+    "mean": 0.4517526473046126,
+    "std": 0.2104534122055909,
+    "min": 0.0,
+    "max": 1.2380199171024229
+  },
+  "imu_duration_s": 130.16000000000003,
+  "video_duration_s": 122.5900000000001,
+  "video_to_imu_offset_seconds": 4.99,
+  "video_to_imu_offset_ms": 4990.0,
+  "peak_correlation": 0.402964490363364,
+  "overlay_png": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\ringbrush-coverage\\outputs\\2026-05-29_video-sync\\sync_overlay.png"
+}
