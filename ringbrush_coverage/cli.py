@@ -10,8 +10,10 @@ from ringbrush_coverage.core import (
     SURFACE_LABELS,
     analysis_report,
     analyze_session,
+    parse_sensor_log,
 )
 from ringbrush_coverage.render import render_mp4
+from ringbrush_coverage.video_anchor import compute_video_dr_per_window
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,6 +59,34 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--heuristic-params",
+        type=Path,
+        help=(
+            "Optional JSON file with overrides for the heuristic DR constants "
+            "{damping, accel_scale, yaw_contrib, pitch_contrib}. Produced by "
+            "tools/calibrate_dr_from_video.py."
+        ),
+    )
+    parser.add_argument(
+        "--video-sync-csv",
+        type=Path,
+        help=(
+            "Synchronized format-3 CSV (output of tools/sync_video_imu.py). "
+            "Required when --dr-method=video-anchored; ignored otherwise. "
+            "Per-window Δwrist replaces the IMU DR estimate where the video "
+            "has coverage; windows without coverage fall back to the heuristic."
+        ),
+    )
+    parser.add_argument(
+        "--video-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "User-side multiplier on top of the per-session auto-rescale that already "
+            "matches the AEOLUS P90 target. Default 1.0."
+        ),
+    )
+    parser.add_argument(
         "--report-only",
         action="store_true",
         help="Run the analysis and optional JSON export without rendering MP4.",
@@ -93,6 +123,24 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     input_path = args.input.resolve()
 
+    heuristic_params: dict[str, float] | None = None
+    if args.heuristic_params is not None:
+        heuristic_params = json.loads(args.heuristic_params.read_text(encoding="utf-8"))
+        heuristic_params = {k: v for k, v in heuristic_params.items() if not k.startswith("_")}
+
+    video_dr_values = None
+    if args.dr_method == "video-anchored":
+        if args.video_sync_csv is None:
+            parser.error("--video-sync-csv is required when --dr-method=video-anchored")
+        parsed = parse_sensor_log(input_path)
+        video_dr_values = compute_video_dr_per_window(
+            parsed.samples,
+            args.video_sync_csv.resolve(),
+            window_size=args.window_size,
+            window_step=args.window_step,
+            scale=args.video_scale,
+        )
+
     analysis = analyze_session(
         input_path,
         calibration_dir=args.calibration_dir.resolve() if args.calibration_dir else None,
@@ -100,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
         window_step=args.window_step,
         target_zone_seconds=args.target_zone_seconds,
         dr_method=args.dr_method,
+        heuristic_params=heuristic_params,
+        video_dr_values=video_dr_values,
     )
     report = analysis_report(analysis)
 

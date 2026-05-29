@@ -57,6 +57,31 @@ Default render: **1280x720 at 30 FPS**. Override with `--width`, `--height`, `--
 
 - `--report-only` — skip the MP4 and just write the JSON + print the per-zone summary. Much faster for sanity checks.
 - `--dr-method aeolus` — replace the default in-house heuristic dead reckoning with a port of the Radeta-2023 AEOLUS pipeline (Earth-frame gravity removal from roll/pitch, Algorithm 1 ZVU drift reduction, heading-projected position update). Returns metres internally and is rescaled per-session to the same visualization range as the heuristic.
+- `--dr-method video-anchored --video-sync-csv <path>` — use a synchronized front-camera recording as ground truth. See "Video-anchored dead reckoning" below.
+- `--heuristic-params <path>` — load JSON overrides for the heuristic DR constants (produced by `tools/calibrate_dr_from_video.py`).
+
+## Video-anchored dead reckoning
+
+If you also recorded a front-camera video of the session, the wrist position from each frame is a much stronger ground truth than IMU integration alone. The pipeline is:
+
+```powershell
+# Install the optional video deps
+python -m pip install -e ".[video]"
+
+# 1. Extract per-frame hand landmarks ("format-3" CSV)
+python tools\extract_video_motion.py "C:/path/to/session.mp4" -o "C:/path/to/session_format-3.csv"
+
+# 2. Cross-correlate with the IMU log to recover the time offset and produce a synchronized CSV
+python tools\sync_video_imu.py "C:/path/to/session.txt" "C:/path/to/session_format-3.csv" --output-dir .\outputs\session-sync
+
+# 3. Render with the new DR method
+ringbrush-coverage "C:/path/to/session.txt" `
+  --dr-method video-anchored `
+  --video-sync-csv .\outputs\session-sync\synchronized_video_on_imu_time.csv `
+  --output .\outputs\session-video-anchored.mp4
+```
+
+For windows where the video has hand-landmark coverage, the cursor is driven directly by the per-session normalized wrist position; for the rest (start/end gaps, MediaPipe miss bursts), the existing heuristic DR fills in. On the bundled 2026-05-29 session this drops mean cursor-to-GT distance from 0.31 (heuristic) and 0.32 (AEOLUS) to 0.03 mouth units — a 90% reduction.
 
 ## Compare both dead-reckoning methods on one log
 

@@ -1,0 +1,22 @@
+{
+  "inputs": {
+    "imu_log": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-05-29_2203_full-session-with-video-recording.txt",
+    "sync_csv": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\ringbrush-coverage\\outputs\\2026-05-29_video-sync\\synchronized_video_on_imu_time.csv"
+  },
+  "rmse_cursor_vs_video_gt_mouth_units": {
+    "heuristic": {
+      "rmse": 0.30947594335043427,
+      "n_windows": 467
+    },
+    "aeolus": {
+      "rmse": 0.3210536769673038,
+      "n_windows": 467
+    },
+    "video_anchored": {
+      "rmse": 0.030206229393381856,
+      "n_windows": 467
+    }
+  },
+  "improvement_video_vs_heuristic_pct": 90.239554950099,
+  "improvement_video_vs_aeolus_pct": 90.59153295526403
+}

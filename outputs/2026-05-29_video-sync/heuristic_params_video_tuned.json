@@ -1,0 +1,17 @@
+{
+  "damping": 0.86,
+  "accel_scale": 1.2,
+  "yaw_contrib": 0.0035,
+  "pitch_contrib": 0.0,
+  "_meta": {
+    "imu_log": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-05-29_2203_full-session-with-video-recording.txt",
+    "sync_csv": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\ringbrush-coverage\\outputs\\2026-05-29_video-sync\\synchronized_video_on_imu_time.csv",
+    "landmark": "wrist",
+    "baseline_rmse": 0.1278248466424655,
+    "new_rmse": 0.1271173858129043,
+    "improvement_fraction": 0.005534611213264373,
+    "windows_used": 463,
+    "post_fit_scale": 0.15549616324776444,
+    "post_fit_rotation_deg": 111.23298725283912
+  }
+}

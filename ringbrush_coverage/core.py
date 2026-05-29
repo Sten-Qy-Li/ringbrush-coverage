@@ -331,9 +331,26 @@ def feature_vector(samples: list[SensorSample]) -> tuple[np.ndarray, dict[str, f
     return vector, metrics
 
 
-def estimate_dead_reckoning(samples: list[SensorSample]) -> tuple[float, float]:
+HEURISTIC_DR_DEFAULTS: dict[str, float] = {
+    "damping": 0.92,
+    "accel_scale": 2.00,
+    "yaw_contrib": 0.0015,
+    "pitch_contrib": 0.0000,
+}
+
+
+def estimate_dead_reckoning(
+    samples: list[SensorSample],
+    params: dict[str, float] | None = None,
+) -> tuple[float, float]:
     if len(samples) < 2:
         return 0.0, 0.0
+
+    p = HEURISTIC_DR_DEFAULTS if params is None else {**HEURISTIC_DR_DEFAULTS, **params}
+    damping = p["damping"]
+    accel_scale = p["accel_scale"]
+    yaw_contrib = p["yaw_contrib"]
+    pitch_contrib = p["pitch_contrib"]
 
     mean_ax = float(np.mean([sample.ax for sample in samples]))
     mean_ay = float(np.mean([sample.ay for sample in samples]))
@@ -346,12 +363,12 @@ def estimate_dead_reckoning(samples: list[SensorSample]) -> tuple[float, float]:
         dt = max((curr.t_ms - prev.t_ms) / 1000.0, 1e-3)
         dyn_ax = curr.ax - mean_ax
         dyn_ay = curr.ay - mean_ay
-        velocity_x = (velocity_x * 0.92) + (dyn_ax * dt * 2.00)
-        velocity_y = (velocity_y * 0.92) - (dyn_ay * dt * 2.00)
+        velocity_x = (velocity_x * damping) + (dyn_ax * dt * accel_scale)
+        velocity_y = (velocity_y * damping) - (dyn_ay * dt * accel_scale)
         pos_x += velocity_x * dt
         pos_y += velocity_y * dt
-        pos_x += circular_delta(curr.yaw, prev.yaw) * 0.0015
-        pos_y -= (curr.pitch - prev.pitch) * 0.0000
+        pos_x += circular_delta(curr.yaw, prev.yaw) * yaw_contrib
+        pos_y -= (curr.pitch - prev.pitch) * pitch_contrib
 
     return float(pos_x), float(pos_y)
 
@@ -453,7 +470,10 @@ class TrajectoryPoint:
     y: float
 
 
-def trajectory_heuristic(samples: list[SensorSample]) -> list[TrajectoryPoint]:
+def trajectory_heuristic(
+    samples: list[SensorSample],
+    params: dict[str, float] | None = None,
+) -> list[TrajectoryPoint]:
     """Full-session trajectory using the heuristic DR per-step logic.
 
     Unlike `estimate_dead_reckoning` (which is windowed and resets state per
@@ -463,6 +483,11 @@ def trajectory_heuristic(samples: list[SensorSample]) -> list[TrajectoryPoint]:
     """
     if len(samples) < 2:
         return [TrajectoryPoint(0.0, 0.0, 0.0)] if samples else []
+
+    p = HEURISTIC_DR_DEFAULTS if params is None else {**HEURISTIC_DR_DEFAULTS, **params}
+    damping = p["damping"]
+    accel_scale = p["accel_scale"]
+    yaw_contrib = p["yaw_contrib"]
 
     mean_ax = float(np.mean([sample.ax for sample in samples]))
     mean_ay = float(np.mean([sample.ay for sample in samples]))
@@ -477,11 +502,11 @@ def trajectory_heuristic(samples: list[SensorSample]) -> list[TrajectoryPoint]:
         dt = max((curr.t_ms - prev.t_ms) / 1000.0, 1e-3)
         dyn_ax = curr.ax - mean_ax
         dyn_ay = curr.ay - mean_ay
-        velocity_x = (velocity_x * 0.92) + (dyn_ax * dt * 2.00)
-        velocity_y = (velocity_y * 0.92) - (dyn_ay * dt * 2.00)
+        velocity_x = (velocity_x * damping) + (dyn_ax * dt * accel_scale)
+        velocity_y = (velocity_y * damping) - (dyn_ay * dt * accel_scale)
         pos_x += velocity_x * dt
         pos_y += velocity_y * dt
-        pos_x += circular_delta(curr.yaw, prev.yaw) * 0.0015
+        pos_x += circular_delta(curr.yaw, prev.yaw) * yaw_contrib
         points.append(TrajectoryPoint((curr.t_ms - t0_ms) / 1000.0, float(pos_x), float(pos_y)))
 
     return points
@@ -668,7 +693,7 @@ def coverage_ratio(coverage_seconds: dict[str, float], target_zone_seconds: floa
     }
 
 
-DR_METHODS = ("heuristic", "aeolus")
+DR_METHODS = ("heuristic", "aeolus", "video-anchored")
 AEOLUS_NORMALIZATION_TARGET_P90 = 0.35
 
 # Motion-amplitude gate parameters. Two orthogonal signals, combined via
@@ -688,11 +713,19 @@ MOTION_GATE_ACCEL_MIDPOINT = 4.5
 MOTION_GATE_ACCEL_SCALE = 0.8
 
 
-def _select_dr_function(dr_method: str):
+def _select_dr_function(dr_method: str, heuristic_params: dict[str, float] | None):
     if dr_method == "heuristic":
-        return estimate_dead_reckoning
+        if heuristic_params is None:
+            return estimate_dead_reckoning
+        return lambda samples: estimate_dead_reckoning(samples, heuristic_params)
     if dr_method == "aeolus":
         return estimate_dead_reckoning_aeolus
+    if dr_method == "video-anchored":
+        # Handled out-of-band below; caller supplies a precomputed per-window
+        # video DR list. Falls back to heuristic for windows with no video.
+        if heuristic_params is None:
+            return estimate_dead_reckoning
+        return lambda samples: estimate_dead_reckoning(samples, heuristic_params)
     raise ValueError(
         f"Unknown dr_method {dr_method!r}; expected one of {DR_METHODS}."
     )
@@ -706,6 +739,8 @@ def analyze_session(
     window_step: int = 20,
     target_zone_seconds: float = 12.0,
     dr_method: str = "heuristic",
+    heuristic_params: dict[str, float] | None = None,
+    video_dr_values: list[tuple[float, float, bool, float, float]] | None = None,
 ) -> SessionAnalysis:
     parsed = parse_sensor_log(input_path)
     if len(parsed.samples) < 2:
@@ -713,7 +748,7 @@ def analyze_session(
 
     calibration = choose_calibration(input_path, calibration_dir, window_size, window_step)
     windows = iter_windows(parsed.samples, window_size, window_step)
-    dr_func = _select_dr_function(dr_method)
+    dr_func = _select_dr_function(dr_method, heuristic_params)
 
     # AEOLUS returns metric meters, the heuristic returns visualization-space
     # units calibrated to a P90 around 0.35. Rescale AEOLUS per-session so the
@@ -725,6 +760,19 @@ def analyze_session(
         scale = float(np.percentile(magnitudes, 90)) if magnitudes else 0.0
         factor = (AEOLUS_NORMALIZATION_TARGET_P90 / scale) if scale > 1e-6 else 0.0
         dr_values = [(dx * factor, dy * factor) for dx, dy in raw_dr_values]
+    elif dr_method == "video-anchored":
+        if video_dr_values is None or len(video_dr_values) != len(raw_dr_values):
+            raise ValueError(
+                "dr_method='video-anchored' requires a video_dr_values list with "
+                "one (dx, dy, has_coverage, target_x, target_y) entry per window."
+            )
+        # Use the video Δwrist where available, fall back to the heuristic IMU
+        # estimate for windows where the video has no coverage (start/end gaps,
+        # MediaPipe miss bursts, etc.).
+        dr_values = [
+            (entry[0], entry[1]) if entry[2] else raw_dr_values[i]
+            for i, entry in enumerate(video_dr_values)
+        ]
     else:
         dr_values = raw_dr_values
 
@@ -735,7 +783,7 @@ def analyze_session(
     dr_magnitude_history: list[float] = []
     accel_std_history: list[float] = []
 
-    for window_samples, (dead_x, dead_y) in zip(windows, dr_values):
+    for window_index, (window_samples, (dead_x, dead_y)) in enumerate(zip(windows, dr_values)):
         vector, metrics = feature_vector(window_samples)
         raw_probabilities, confidence = calibration.classify(vector, metrics["activity"])
         smoothed_probabilities = smooth_probabilities(
@@ -745,8 +793,22 @@ def analyze_session(
         )
 
         anchor_x, anchor_y = weighted_anchor(smoothed_probabilities)
-        target_x = clamp(anchor_x + clamp(dead_x * 0.38, -0.18, 0.18), 0.08, 0.92)
-        target_y = clamp(anchor_y + clamp(dead_y * 0.38, -0.16, 0.16), 0.10, 0.90)
+        video_target: tuple[float, float] | None = None
+        if dr_method == "video-anchored":
+            entry = video_dr_values[window_index]
+            if entry[2]:
+                video_target = (entry[3], entry[4])
+
+        if video_target is not None:
+            # When the video has coverage, the wrist position is ground truth
+            # — skip the zone-anchor + DR-nudge blend and drive the cursor at
+            # the bbox-mapped wrist position directly. Follow damping is kept
+            # so motion still looks smooth.
+            target_x = clamp(video_target[0], 0.08, 0.92)
+            target_y = clamp(video_target[1], 0.10, 0.90)
+        else:
+            target_x = clamp(anchor_x + clamp(dead_x * 0.38, -0.18, 0.18), 0.08, 0.92)
+            target_y = clamp(anchor_y + clamp(dead_y * 0.38, -0.16, 0.16), 0.10, 0.90)
         follow = 0.40 + (0.35 * metrics["activity"])
         cursor = (
             clamp((cursor[0] * (1.0 - follow)) + (target_x * follow), 0.08, 0.92),

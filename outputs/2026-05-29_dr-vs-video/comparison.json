@@ -1,0 +1,55 @@
+{
+  "inputs": {
+    "imu_log": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-05-29_2203_full-session-with-video-recording.txt",
+    "sync_csv": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\ringbrush-coverage\\outputs\\2026-05-29_video-sync\\synchronized_video_on_imu_time.csv",
+    "landmark": "wrist",
+    "resample_hz": 20.0
+  },
+  "trajectories": {
+    "heuristic": {
+      "label": "heuristic",
+      "points": 10117,
+      "path_length": 169.8342808365299,
+      "bbox_diag": 52.61204677485505,
+      "duration_s": 130.204
+    },
+    "aeolus": {
+      "label": "aeolus",
+      "points": 10117,
+      "path_length": 18.798466076628777,
+      "bbox_diag": 12.510767179902851,
+      "duration_s": 130.204
+    },
+    "video": {
+      "label": "video",
+      "points": 3192,
+      "path_length": 87.89186873544307,
+      "bbox_diag": 1.410878890576367,
+      "duration_s": 120.265878
+    }
+  },
+  "common_grid": {
+    "t_start_s": 6.538811,
+    "t_end_s": 126.804689,
+    "samples": 2406
+  },
+  "shape_normalized_rmse_vs_video": {
+    "heuristic": {
+      "rmse": 1.2590343008130571,
+      "rotation_deg": 344.0,
+      "reflected": false,
+      "samples": 2406
+    },
+    "aeolus": {
+      "rmse": 1.2357401767059595,
+      "rotation_deg": 102.0,
+      "reflected": false,
+      "samples": 2406
+    }
+  },
+  "scale_factors": {
+    "heuristic_rms": 14.082253372664942,
+    "aeolus_rms": 3.1957014881926815,
+    "video_rms": 0.2162973276884815
+  }
+}
