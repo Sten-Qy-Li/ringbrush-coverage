@@ -1,0 +1,137 @@
+{
+  "segments": [
+    {
+      "name": "01_title",
+      "path": "report_assets\\segments\\01_title.mp4",
+      "start_s": 0.0,
+      "duration_s": 5.0
+    },
+    {
+      "name": "02_bg_1",
+      "path": "report_assets\\segments\\02_bg_1.mp4",
+      "start_s": 5.0,
+      "duration_s": 8.77
+    },
+    {
+      "name": "02_bg_2",
+      "path": "report_assets\\segments\\02_bg_2.mp4",
+      "start_s": 13.77,
+      "duration_s": 8.77
+    },
+    {
+      "name": "02_bg_3",
+      "path": "report_assets\\segments\\02_bg_3.mp4",
+      "start_s": 22.54,
+      "duration_s": 8.77
+    },
+    {
+      "name": "02_bg_4",
+      "path": "report_assets\\segments\\02_bg_4.mp4",
+      "start_s": 31.31,
+      "duration_s": 8.77
+    },
+    {
+      "name": "03_method_heuristic_text",
+      "path": "report_assets\\segments\\03_method_heuristic_text.mp4",
+      "start_s": 40.08,
+      "duration_s": 9.0
+    },
+    {
+      "name": "03_method_heuristic_play",
+      "path": "report_assets\\segments\\03_method_heuristic_play.mp4",
+      "start_s": 49.08,
+      "duration_s": 18.0
+    },
+    {
+      "name": "03_method_aeolus_text",
+      "path": "report_assets\\segments\\03_method_aeolus_text.mp4",
+      "start_s": 67.08,
+      "duration_s": 9.0
+    },
+    {
+      "name": "03_method_aeolus_play",
+      "path": "report_assets\\segments\\03_method_aeolus_play.mp4",
+      "start_s": 76.08,
+      "duration_s": 18.0
+    },
+    {
+      "name": "03_method_video_text",
+      "path": "report_assets\\segments\\03_method_video_text.mp4",
+      "start_s": 94.08,
+      "duration_s": 9.0
+    },
+    {
+      "name": "03_method_video_play",
+      "path": "report_assets\\segments\\03_method_video_play.mp4",
+      "start_s": 103.08,
+      "duration_s": 18.0
+    },
+    {
+      "name": "04_results_title",
+      "path": "report_assets\\segments\\04_results_title.mp4",
+      "start_s": 121.08,
+      "duration_s": 5.0
+    },
+    {
+      "name": "04_results_3up",
+      "path": "report_assets\\segments\\04_results_3up.mp4",
+      "start_s": 126.08,
+      "duration_s": 75.0
+    },
+    {
+      "name": "05_os_intro_1",
+      "path": "report_assets\\segments\\05_os_intro_1.mp4",
+      "start_s": 201.08,
+      "duration_s": 17.5
+    },
+    {
+      "name": "05_os_intro_2",
+      "path": "report_assets\\segments\\05_os_intro_2.mp4",
+      "start_s": 218.58,
+      "duration_s": 17.5
+    },
+    {
+      "name": "06_os_result",
+      "path": "report_assets\\segments\\06_os_result.mp4",
+      "start_s": 236.08,
+      "duration_s": 35.0
+    },
+    {
+      "name": "07_appendix_title",
+      "path": "report_assets\\segments\\07_appendix_title.mp4",
+      "start_s": 271.08,
+      "duration_s": 6.0
+    },
+    {
+      "name": "07_appx_primary",
+      "path": "report_assets\\segments\\07_appx_primary.mp4",
+      "start_s": 277.08,
+      "duration_s": 75.0
+    },
+    {
+      "name": "07_appx_old_full",
+      "path": "report_assets\\segments\\07_appx_old_full.mp4",
+      "start_s": 352.08,
+      "duration_s": 50.0
+    },
+    {
+      "name": "07_appx_updown",
+      "path": "report_assets\\segments\\07_appx_updown.mp4",
+      "start_s": 402.08,
+      "duration_s": 16.0
+    },
+    {
+      "name": "07_appx_leftright",
+      "path": "report_assets\\segments\\07_appx_leftright.mp4",
+      "start_s": 418.08,
+      "duration_s": 11.0
+    },
+    {
+      "name": "08_outro",
+      "path": "report_assets\\segments\\08_outro.mp4",
+      "start_s": 429.08,
+      "duration_s": 4.0
+    }
+  ],
+  "total_s": 433.08
+}
