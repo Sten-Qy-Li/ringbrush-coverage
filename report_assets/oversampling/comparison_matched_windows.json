@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "method": "heuristic",
+      "original_rmse": 0.30947594335043427,
+      "oversampled_rmse": 0.45381595748078163,
+      "delta_pct": 46.640140286091416,
+      "original_windows": 467,
+      "oversampled_windows": 467,
+      "window_size_orig": 80,
+      "window_step_orig": 20,
+      "window_size_over": 160,
+      "window_step_over": 40
+    },
+    {
+      "method": "aeolus",
+      "original_rmse": 0.3210536769673038,
+      "oversampled_rmse": 0.44116592495292367,
+      "delta_pct": 37.41188984976245,
+      "original_windows": 467,
+      "oversampled_windows": 467,
+      "window_size_orig": 80,
+      "window_step_orig": 20,
+      "window_size_over": 160,
+      "window_step_over": 40
+    }
+  ],
+  "note": "window_size doubled for oversampled log so analysis windows cover the same ~1s interval as originals"
+}

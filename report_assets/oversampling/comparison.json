@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "method": "heuristic",
+      "original_rmse": 0.30947594335043427,
+      "original_windows": 467,
+      "oversampled_rmse": 0.45385554869005135,
+      "oversampled_windows": 935,
+      "delta_pct": 46.65293327052863
+    },
+    {
+      "method": "aeolus",
+      "original_rmse": 0.3210536769673038,
+      "original_windows": 467,
+      "oversampled_rmse": 0.4415869779259848,
+      "oversampled_windows": 935,
+      "delta_pct": 37.54303707007726
+    }
+  ]
+}

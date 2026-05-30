@@ -1,0 +1,42 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings\\2026-05-29_2203_full-session-with-video-recording.txt",
+  "calibration_source": "calibrated from C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings",
+  "dr_method": "heuristic",
+  "duration_seconds": 130.204,
+  "parsed_rows": 10117,
+  "skipped_rows": 11,
+  "target_zone_seconds": 12.0,
+  "zones": {
+    "outer-left": {
+      "display_name": "Outer left",
+      "coverage_seconds": 21.989,
+      "coverage_ratio": 0.84,
+      "coverage_percent": 84.0
+    },
+    "outer-front": {
+      "display_name": "Outer front",
+      "coverage_seconds": 59.763,
+      "coverage_ratio": 0.9931,
+      "coverage_percent": 99.3
+    },
+    "outer-right": {
+      "display_name": "Outer right",
+      "coverage_seconds": 46.709,
+      "coverage_ratio": 0.9796,
+      "coverage_percent": 98.0
+    },
+    "inner-upper": {
+      "display_name": "Inner upper",
+      "coverage_seconds": 30.084,
+      "coverage_ratio": 0.9185,
+      "coverage_percent": 91.8
+    },
+    "inner-lower": {
+      "display_name": "Inner lower",
+      "coverage_seconds": 49.139,
+      "coverage_ratio": 0.9833,
+      "coverage_percent": 98.3
+    }
+  },
+  "window_count": 503
+}

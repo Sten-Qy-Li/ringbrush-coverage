@@ -1,0 +1,42 @@
+{
+  "input_file": "C:\\MSc-Computer-Science\\Semester-2\\pdss\\ringbrush-coverage\\report_assets\\oversampling\\primary_oversampled.txt",
+  "calibration_source": "calibrated from C:\\MSc-Computer-Science\\Semester-2\\pdss\\recordings",
+  "dr_method": "aeolus",
+  "duration_seconds": 130.204,
+  "parsed_rows": 20233,
+  "skipped_rows": 0,
+  "target_zone_seconds": 12.0,
+  "zones": {
+    "outer-left": {
+      "display_name": "Outer left",
+      "coverage_seconds": 0.111,
+      "coverage_ratio": 0.0092,
+      "coverage_percent": 0.9
+    },
+    "outer-front": {
+      "display_name": "Outer front",
+      "coverage_seconds": 0.173,
+      "coverage_ratio": 0.0143,
+      "coverage_percent": 1.4
+    },
+    "outer-right": {
+      "display_name": "Outer right",
+      "coverage_seconds": 65.623,
+      "coverage_ratio": 0.9958,
+      "coverage_percent": 99.6
+    },
+    "inner-upper": {
+      "display_name": "Inner upper",
+      "coverage_seconds": 0.299,
+      "coverage_ratio": 0.0246,
+      "coverage_percent": 2.5
+    },
+    "inner-lower": {
+      "display_name": "Inner lower",
+      "coverage_seconds": 0.293,
+      "coverage_ratio": 0.0241,
+      "coverage_percent": 2.4
+    }
+  },
+  "window_count": 1009
+}
