@@ -6,6 +6,8 @@ Submitted to the Institute of Computer Science in fulfillment of the requirement
 
  at the University of Tartu, in the spring of 2026.
 
+https://github.com/user-attachments/assets/a515ad8b-cf47-4620-b919-a1f6b2e2105d
+
 ---
 
 Turn a smart-ring sensor log into an MP4 that shows where someone brushed their teeth. The video renders a stylized mouth, a dead-reckoned brush cursor with a short motion trail, and per-zone coverage bars that fill as each surface is brushed.
