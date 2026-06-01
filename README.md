@@ -1,6 +1,14 @@
 # ringbrush-coverage
 
-Turn a smart-ring sensor log into an MP4 that shows where someone brushed their teeth. The video renders a stylized mouth, a dead-reckoned brush cursor with a short motion trail, and per-zone coverage bars that fill as each surface is brushed. Built for the University of Tartu *Pervasive Data Science Seminar*.
+Submitted to the Institute of Computer Science in fulfillment of the requirements for the courses:
+ * Pervasive Data Science Seminar (3 ECTS, LTAT.06.010); and
+ * Distributed Systems Project (3 ECTS, LTAT.00.010)
+
+ at the University of Tartu, in the spring of 2026.
+
+---
+
+Turn a smart-ring sensor log into an MP4 that shows where someone brushed their teeth. The video renders a stylized mouth, a dead-reckoned brush cursor with a short motion trail, and per-zone coverage bars that fill as each surface is brushed.
 
 ## Install
 
