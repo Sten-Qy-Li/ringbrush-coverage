@@ -6,9 +6,10 @@ build/
 dist/
 *.egg-info/
 
-# Large old-model MP4 renders (archived locally; see
-# session-archive/2026-04-20_dead-reckoning-recalibration.md).
-# JSON summaries for these runs are still committed.
-outputs/full-session-coverage_bb0a4b4.mp4
-outputs/smoke-640x360_bb0a4b4.mp4
-outputs/verification-small_bb0a4b4.mp4
+# LaTeX build artefacts (only the .tex source and final .pdf are tracked)
+docs/*.aux
+docs/*.log
+docs/*.out
+
+# ffmpeg concat-list intermediate emitted by tools/build_report.py
+report_assets/final_report_concat.txt
