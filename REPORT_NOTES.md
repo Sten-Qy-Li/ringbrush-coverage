@@ -5,6 +5,11 @@ build script: `tools/build_report.py`. Re-run end-to-end with
 `python tools/build_report.py` (use `--clean` to wipe intermediate
 segments first).
 
+**Resolution: 1920×1080 (1080p) @ 30 fps.** Methodology source MP4s
+under `report_assets/methodology_videos/` are also re-rendered at
+1080p via the standard CLI (`--width 1920 --height 1080`) so the
+side-by-side composites downscale rather than upscale into each panel.
+
 ## Timeline
 
 `report_assets/final_report_timeline.json` carries every segment's
@@ -13,22 +18,29 @@ start time and duration. Top-level structure:
 | Section | Time | Content |
 |---|---|---|
 | 01_title             | 0:00 → 0:05  | "Ringbrush Coverage" title card. |
-| 02_bg_1 .. 02_bg_4   | 0:05 → 0:40  | Four plain-language background cards (prototype, data-log format, pipeline, output). |
-| 03_method_heuristic  | 0:40 → 1:07  | 9 s explainer card + 18 s sped-up heuristic playback on the primary log. |
-| 03_method_aeolus     | 1:07 → 1:34  | Same shape: 9 s + 18 s for AEOLUS. |
-| 03_method_video      | 1:34 → 2:01  | Same shape: 9 s + 18 s for Video-based. |
-| 04_results_title     | 2:01 → 2:06  | "Three methodologies, one session" title card. |
-| 04_results_3up       | 2:06 → 3:21  | 75 s side-by-side playback of all three on the primary log @ 1.75x. |
-| 05_os_intro_1/2      | 3:21 → 3:56  | What over-sampling is + hypothesis (Nyquist). |
-| 06_os_result         | 3:56 → 4:31  | Numbers + plain-language conclusion. |
-| 07_appendix_title    | 4:31 → 4:37  | Appendix banner. |
-| 07_appx_primary      | 4:37 → 5:52  | All 3 methods on the primary log (2026-05-29). 75 s @ 1.75x. |
-| 07_appx_old_full     | 5:52 → 6:42  | All 3 methods on the earlier full session (2026-03-28). 50 s @ 1.25x. Video-based panel shows the "not available" card. |
-| 07_appx_updown       | 6:42 → 6:58  | All 3 methods on the up-down calibration log. 16 s @ 1x. |
-| 07_appx_leftright    | 6:58 → 7:09  | All 3 methods on the left-right calibration log. 11 s @ 1x. |
-| 08_outro             | 7:09 → 7:13  | Thank-you / repo link. |
+| 01a_submission       | 0:05 → 0:13  | University of Tartu submission notice (LTAT.06.010 + LTAT.00.010). |
+| 02_bg_1 .. 02_bg_4   | 0:13 → 0:41  | Four plain-language background cards (prototype, data-log format, pipeline, output). 7 s each. |
+| 03_method_heuristic  | 0:41 → 1:08  | 9 s explainer card + 18 s sped-up heuristic playback on the primary log. |
+| 03_method_aeolus     | 1:08 → 1:35  | Same shape: 9 s + 18 s for AEOLUS. |
+| 03_method_video      | 1:35 → 2:02  | Same shape: 9 s + 18 s for Video-based. |
+| 03d_selfie_vs_rendered | 2:02 → 2:08.5 | 6.5 s 2-up: raw front-camera recording on the left, the video-anchored rendered cursor on the right, lined up on the same ~10 s brushing moment via the +4.99 s IMU/video offset. |
+| 04_results_title     | 2:08.5 → 2:13.5 | "Three methodologies, one session" title card. |
+| 04_results_3up       | 2:13.5 → 3:28.5 | 75 s side-by-side playback of all three on the primary log @ 1.75x. |
+| 05_os_intro_1/2      | 3:28.5 → 3:52.5 | What over-sampling is + hypothesis (Nyquist). 12 s each. |
+| 06_os_result         | 3:52.5 → 4:14.5 | Numbers + plain-language conclusion. |
+| 07_appendix_title    | 4:14.5 → 4:20.5 | Appendix banner. |
+| 07_appx_primary      | 4:20.5 → 5:35.5 | All 3 methods on the primary log (2026-05-29). 75 s @ 1.75x. |
+| 07_appx_old_full     | 5:35.5 → 6:25.5 | All 3 methods on the earlier full session (2026-03-28). 50 s @ 1.25x. Video-based panel shows the "not available" card. |
+| 07_appx_updown       | 6:25.5 → 6:41.5 | All 3 methods on the up-down calibration log. 16 s @ 1x. |
+| 07_appx_leftright    | 6:41.5 → 6:52.5 | All 3 methods on the left-right calibration log. 11 s @ 1x. |
+| 08_outro             | 6:52.5 → 6:56.5 | Thank-you / repo link. |
 
-Total duration: **7:13** (base report 4:31 + appendix 2:38 + outro 4 s).
+Total duration: **6:56** (base report 4:14.5 + appendix 2:38 + outro 4 s).
+The base now comfortably fits the requested 5-minute envelope and includes
+the new submission slide (8 s) and selfie-vs-rendered comparison (6.5 s);
+budget came from trimming the four background cards (8.77 → 7 s each),
+the two over-sampling intro cards (17.5 → 12 s each), and the
+over-sampling result card (35 → 22 s).
 
 ## Which methodology MP4 lives in which section
 
@@ -46,6 +58,7 @@ each input into a 426×240 panel inside a 1280×720 frame:
 | 07_appx_old_full         | left / mid / "not available" | `old_full_heuristic.mp4` / `old_full_aeolus.mp4` / placeholder |
 | 07_appx_updown           | left / mid / "not available" | `updown_heuristic.mp4` / `updown_aeolus.mp4` / placeholder |
 | 07_appx_leftright        | left / mid / "not available" | `leftright_heuristic.mp4` / `leftright_aeolus.mp4` / placeholder |
+| 03d_selfie_vs_rendered   | left / right                  | raw `recordings/2026-05-29_2203_full-session-with-video-recording.mp4` (selfie video, audio stripped) / `primary_video.mp4` (rendered cursor). Selfie starts at t=20.0 s; rendered starts at t=24.99 s to match the IMU offset; both play at 1.5x. |
 
 ## Accuracy comments — sources
 
@@ -96,11 +109,27 @@ would need to be re-expressed in per-time form (e.g. `damping = exp(-k * dt)`).
 
 ## Design decisions
 
-* **Normalization of side-by-side panels.** Each input is scaled to fit a
-  426×240 box preserving 16:9 aspect (so the mouth diagram stays circular)
-  and then padded with black above and below to fill its 1280/3-wide
-  column. The accuracy caption sits in the black space *below* the video
-  so the source visualization is never covered.
+* **Resolution and scaling.** Output is 1920×1080. The PIL drawing code
+  has a single scale factor `S = HEIGHT / 720` (so `S = 1.5` at 1080p);
+  every font size, margin and anchor in the title-card and overlay
+  helpers is multiplied through `_s(...)` so the 720p reference design
+  ports cleanly. Methodology source MP4s are also re-rendered at 1080p
+  so each panel downscales rather than upscales.
+* **Submission slide.** Sits directly after the title at 0:05–0:13. Plain
+  text card; no eyebrow gymnastics, no decorative imagery.
+* **Selfie vs rendered comparison.** A dedicated 2-up composer
+  (`build_two_up_segment`) handles this. Each panel is 960×540, the
+  banner names the section and the two captions describe what each panel
+  shows. Audio is stripped (`-an`) — the source selfie has audio, the
+  report has none anywhere else. The two streams are synchronized via the
+  +4.99 s offset found by `tools/sync_video_imu.py`: when the left panel
+  shows selfie t=20 s, the right panel shows IMU-relative t=24.99 s, so
+  both panels are looking at the same brushing moment.
+* **Normalization of 3-up side-by-side panels.** Each input is scaled to
+  fit a 640×360 box preserving 16:9 aspect (so the mouth diagram stays
+  circular) and then padded with black above and below to fill its
+  1920/3-wide column. The accuracy caption sits in the black space
+  *below* the video so the source visualization is never covered.
 * **Panel duration.** When a source MP4 is shorter than the composite
   duration, ffmpeg lets it end and the column shows black for the
   remainder. For the calibration logs this is intentional: appendix

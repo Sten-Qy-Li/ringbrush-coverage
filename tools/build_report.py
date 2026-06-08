@@ -42,9 +42,30 @@ TITLE_CARDS = ASSETS / "title_cards"
 METHODS_DIR = ASSETS / "methodology_videos"
 OVER_DIR = ASSETS / "oversampling"
 
-WIDTH = 1280
-HEIGHT = 720
+# Raw front-camera recording paired with the primary IMU log. Used by the
+# selfie-vs-rendered comparison segment in Methodology 3.
+SELFIE_VIDEO = Path(
+    "C:/MSc-Computer-Science/Semester-2/pdss/recordings/"
+    "2026-05-29_2203_full-session-with-video-recording.mp4"
+)
+# The video begins 4.99 s after the IMU log per the cross-correlation sync
+# (see outputs/2026-05-29_video-sync/sync_report.json). To put the same
+# brushing moment side-by-side, the IMU-time render starts 4.99 s later
+# than the selfie video.
+VIDEO_IMU_OFFSET_S = 4.99
+
+WIDTH = 1920
+HEIGHT = 1080
 FPS = 30
+
+# Layout scale relative to the original 720p design. Everything that used
+# to be a hard-coded 720p pixel value (font sizes, margins, anchor offsets)
+# is multiplied by this so the look stays consistent at 1080p.
+S = HEIGHT / 720.0
+
+
+def _s(v: float) -> int:
+    return int(round(v * S))
 
 BG_TOP = (24, 30, 44)        # dark navy
 BG_BOTTOM = (12, 16, 26)
@@ -115,34 +136,35 @@ def make_title_card(
     img = _gradient_bg(WIDTH, HEIGHT)
     draw = ImageDraw.Draw(img)
 
+    left_margin = _s(110)
     if accent_bar:
-        draw.rectangle((80, 80, 84, HEIGHT - 80), fill=ACCENT)
+        draw.rectangle((_s(80), _s(80), _s(80) + _s(4), HEIGHT - _s(80)), fill=ACCENT)
 
-    y = 100
+    y = _s(100)
     if eyebrow:
-        font = _font(22)
-        draw.text((110, y), eyebrow.upper(), fill=ACCENT, font=font)
-        y += 50
+        font = _font(_s(22))
+        draw.text((left_margin, y), eyebrow.upper(), fill=ACCENT, font=font)
+        y += _s(50)
 
     if title:
-        font = _font(56, bold=True)
-        lines = _wrap_lines(draw, title, font, WIDTH - 220)
+        font = _font(_s(56), bold=True)
+        lines = _wrap_lines(draw, title, font, WIDTH - _s(220))
         for line in lines:
-            draw.text((108, y), line, fill=TEXT, font=font)
-            y += 76
-        y += 20
+            draw.text((left_margin - _s(2), y), line, fill=TEXT, font=font)
+            y += _s(76)
+        y += _s(20)
 
     if body:
-        font = _font(28)
-        lines = _wrap_lines(draw, body, font, WIDTH - 240)
+        font = _font(_s(28))
+        lines = _wrap_lines(draw, body, font, WIDTH - _s(240))
         for line in lines:
-            draw.text((110, y), line, fill=DIM, font=font)
-            y += 42
-        y += 16
+            draw.text((left_margin, y), line, fill=DIM, font=font)
+            y += _s(42)
+        y += _s(16)
 
     if footnote:
-        font = _font(20)
-        draw.text((110, HEIGHT - 110), footnote, fill=DIM, font=font)
+        font = _font(_s(20))
+        draw.text((left_margin, HEIGHT - _s(110)), footnote, fill=DIM, font=font)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path)
@@ -164,25 +186,25 @@ def make_three_up_overlay(
     draw = ImageDraw.Draw(img)
     # Top banner with section title.
     draw.rectangle((0, 0, WIDTH, banner_height), fill=(*BG_TOP, 220))
-    banner_font = _font(26, bold=True)
+    banner_font = _font(_s(26), bold=True)
     bb = draw.textbbox((0, 0), banner_text, font=banner_font)
     draw.text(
-        ((WIDTH - bb[2]) // 2, (banner_height - bb[3]) // 2 - 4),
+        ((WIDTH - bb[2]) // 2, (banner_height - bb[3]) // 2 - _s(4)),
         banner_text, fill=TEXT, font=banner_font,
     )
     # Per-column methodology name (above video).
-    label_font = _font(24, bold=True)
-    cap_font = _font(20)
+    label_font = _font(_s(24), bold=True)
+    cap_font = _font(_s(20))
     for i, (label, cap) in enumerate(zip(panel_labels, panel_captions)):
         col_x = i * column_width
         # Methodology label between banner and video.
         lb = draw.textbbox((0, 0), label, font=label_font)
         draw.text(
-            (col_x + (column_width - lb[2]) // 2, video_top - lb[3] - 24),
+            (col_x + (column_width - lb[2]) // 2, video_top - lb[3] - _s(24)),
             label, fill=ACCENT, font=label_font,
         )
         # Accuracy caption below video, wrapped.
-        lines = _wrap_lines(draw, cap, cap_font, column_width - 40)
+        lines = _wrap_lines(draw, cap, cap_font, column_width - _s(40))
         cy = caption_top
         for line in lines:
             tb = draw.textbbox((0, 0), line, font=cap_font)
@@ -190,26 +212,26 @@ def make_three_up_overlay(
                 (col_x + (column_width - tb[2]) // 2, cy),
                 line, fill=DIM, font=cap_font,
             )
-            cy += 30
+            cy += _s(30)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path)
 
 
 def make_not_available_panel(output_path: Path, message: str) -> None:
     """A still 'not available' card sized to fit one side-by-side column."""
-    column_width = WIDTH // 3
-    panel_h = 240
+    L = overlay_layout()
+    column_width = L["column_width"]
+    panel_h = L["panel_h"]
     img = Image.new("RGB", (column_width, panel_h), color=BG_BOTTOM)
     draw = ImageDraw.Draw(img)
-    # Cross-hatch / muted icon.
-    draw.rectangle((10, 10, column_width - 10, panel_h - 10), outline=(70, 80, 95), width=2)
-    font = _font(20, bold=True)
-    lines = _wrap_lines(draw, message, font, column_width - 60)
-    y = (panel_h - len(lines) * 30) // 2
+    draw.rectangle((_s(10), _s(10), column_width - _s(10), panel_h - _s(10)), outline=(70, 80, 95), width=_s(2))
+    font = _font(_s(20), bold=True)
+    lines = _wrap_lines(draw, message, font, column_width - _s(60))
+    y = (panel_h - len(lines) * _s(30)) // 2
     for line in lines:
         tb = draw.textbbox((0, 0), line, font=font)
         draw.text(((column_width - tb[2]) // 2, y), line, fill=DIM, font=font)
-        y += 30
+        y += _s(30)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path)
 
@@ -332,6 +354,96 @@ def build_three_up_segment(
     _run(cmd)
 
 
+def make_two_up_overlay(
+    output_path: Path,
+    *,
+    banner_text: str,
+    panel_labels: tuple[str, str],
+    panel_captions: tuple[str, str],
+    column_width: int,
+    banner_height: int,
+    video_top: int,
+    caption_top: int,
+) -> None:
+    """Transparent PNG overlay for a 2-panel side-by-side."""
+    img = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((0, 0, WIDTH, banner_height), fill=(*BG_TOP, 220))
+    banner_font = _font(_s(28), bold=True)
+    bb = draw.textbbox((0, 0), banner_text, font=banner_font)
+    draw.text(((WIDTH - bb[2]) // 2, (banner_height - bb[3]) // 2 - _s(4)), banner_text, fill=TEXT, font=banner_font)
+
+    label_font = _font(_s(26), bold=True)
+    cap_font = _font(_s(22))
+    for i, (label, cap) in enumerate(zip(panel_labels, panel_captions)):
+        col_x = i * column_width
+        lb = draw.textbbox((0, 0), label, font=label_font)
+        draw.text((col_x + (column_width - lb[2]) // 2, video_top - lb[3] - _s(24)), label, fill=ACCENT, font=label_font)
+        lines = _wrap_lines(draw, cap, cap_font, column_width - _s(60))
+        cy = caption_top
+        for line in lines:
+            tb = draw.textbbox((0, 0), line, font=cap_font)
+            draw.text((col_x + (column_width - tb[2]) // 2, cy), line, fill=DIM, font=cap_font)
+            cy += _s(32)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_path)
+
+
+def build_two_up_segment(
+    left_src: Path,
+    right_src: Path,
+    overlay_png: Path,
+    output_path: Path,
+    *,
+    duration_s: float,
+    left_start_s: float = 0.0,
+    right_start_s: float = 0.0,
+    speed: float = 1.0,
+) -> None:
+    """Two videos side-by-side with an overlay. Audio is stripped from both.
+
+    Each source is scaled to fit a column-width-wide panel preserving
+    16:9 aspect and centered vertically. Trim/seek lets the caller pick
+    different start times in each source, which is how we line up the
+    selfie video with the rendered cursor MP4 across the 4.99 s IMU/
+    video sync offset.
+    """
+    L = two_up_layout()
+    column_width = L["column_width"]
+    panel_h = L["panel_h"]
+    video_top = L["video_top"]
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    speed_filter = f",setpts=PTS/{speed}" if speed != 1.0 else ""
+    bg_top = BG_TOP
+    filter_complex = (
+        f"color=c=#{bg_top[0]:02x}{bg_top[1]:02x}{bg_top[2]:02x}:s={WIDTH}x{HEIGHT}:r={FPS}[bg];"
+        f"[0:v]trim=start={left_start_s},setpts=PTS-STARTPTS{speed_filter},"
+        f"scale={column_width}:{panel_h}:force_original_aspect_ratio=decrease,"
+        f"pad={column_width}:{panel_h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1[p0];"
+        f"[1:v]trim=start={right_start_s},setpts=PTS-STARTPTS{speed_filter},"
+        f"scale={column_width}:{panel_h}:force_original_aspect_ratio=decrease,"
+        f"pad={column_width}:{panel_h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1[p1];"
+        f"[bg][p0]overlay=0:{video_top}[bg0];"
+        f"[bg0][p1]overlay={column_width}:{video_top}[bg1];"
+        f"[bg1][2:v]overlay=0:0:format=auto"
+    )
+    cmd = [
+        FFMPEG, "-y",
+        "-i", str(left_src),
+        "-i", str(right_src),
+        "-loop", "1", "-t", f"{duration_s:.3f}", "-framerate", str(FPS), "-i", str(overlay_png),
+        "-filter_complex", filter_complex,
+        "-an",
+        "-t", f"{duration_s:.3f}",
+        "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
+        "-movflags", "+faststart",
+        str(output_path),
+    ]
+    _run(cmd)
+
+
 def build_single_video_segment(
     src: Path,
     overlay_png: Path,
@@ -404,15 +516,35 @@ def concat_videos(segment_paths: list[Path], output_path: Path) -> None:
 def overlay_layout() -> dict:
     """Return the layout dict that *both* the overlay PNG and the
     side-by-side composer rely on. Same source-of-truth for both so
-    panel positions stay in sync."""
-    column_width = WIDTH // 3  # 426
-    # Match the aspect-preserving rescale that ffmpeg actually produces from a
-    # 1280x720 source: round(720 * 426 / 1280) = 240. Using 239 here makes the
-    # downstream `pad` filter refuse to shrink the scaled frame.
-    panel_h = 240
-    banner_height = 70
-    video_top = 280
-    caption_top = video_top + panel_h + 30
+    panel positions stay in sync.
+
+    At 1920x1080: each 3-up column is 640 wide, the source MP4
+    (rendered at 1920x1080 too) downscales to 640x360 preserving 16:9
+    aspect. Banner is on top, methodology label between banner and
+    video, accuracy caption below the video.
+    """
+    column_width = WIDTH // 3  # 640 at 1080p
+    panel_h = (column_width * 9) // 16  # 360 — preserves 16:9 exactly here
+    banner_height = _s(70)
+    video_top = _s(280)
+    caption_top = video_top + panel_h + _s(30)
+    return {
+        "column_width": column_width,
+        "panel_h": panel_h,
+        "banner_height": banner_height,
+        "video_top": video_top,
+        "caption_top": caption_top,
+    }
+
+
+def two_up_layout() -> dict:
+    """Two-panel side-by-side layout. Same banner / caption regions,
+    but each panel is wider so the source detail is preserved."""
+    column_width = WIDTH // 2  # 960 at 1080p
+    panel_h = (column_width * 9) // 16  # 540
+    banner_height = _s(70)
+    video_top = _s(150)
+    caption_top = video_top + panel_h + _s(30)
     return {
         "column_width": column_width,
         "panel_h": panel_h,
@@ -430,6 +562,7 @@ def build_all(output_dir: Path) -> Path:
     SEGMENTS.mkdir(parents=True, exist_ok=True)
     TITLE_CARDS.mkdir(parents=True, exist_ok=True)
     L = overlay_layout()
+    L2 = two_up_layout()
 
     # Captions sourced from the JSON metrics we computed in Phase 2/3.
     primary_caps = (
@@ -471,7 +604,24 @@ def build_all(output_dir: Path) -> Path:
     png_to_video(TITLE_CARDS / "01_title.png", seg, duration_s=5.0)
     plan.append(("01_title", seg))
 
-    # ----- Section 2: Background (35s split over 4 cards) -----
+    # ----- Section 1a: Submission notice (8s) -----
+    make_title_card(
+        TITLE_CARDS / "01a_submission.png",
+        eyebrow="Submission",
+        title="University of Tartu, spring 2026",
+        body=(
+            "Submitted to the Institute of Computer Science in fulfillment of the "
+            "requirements for the courses Pervasive Data Science Seminar "
+            "(3 ECTS, LTAT.06.010) and Distributed Systems Project "
+            "(3 ECTS, LTAT.00.010)."
+        ),
+        footnote=None,
+    )
+    sub_seg = SEGMENTS / "01a_submission.mp4"
+    png_to_video(TITLE_CARDS / "01a_submission.png", sub_seg, duration_s=8.0)
+    plan.append(("01a_submission", sub_seg))
+
+    # ----- Section 2: Background (28s split over 4 cards, 7s each) -----
     bg_cards = [
         dict(
             eyebrow="Background  1 / 4",
@@ -494,7 +644,7 @@ def build_all(output_dir: Path) -> Path:
             body="A stylized mouth diagram, a brush cursor with a short trail, and per-zone coverage bars that fill as each surface is brushed.",
         ),
     ]
-    bg_duration_each = 35.0 / len(bg_cards)
+    bg_duration_each = 28.0 / len(bg_cards)
     for i, card in enumerate(bg_cards, start=1):
         png = TITLE_CARDS / f"02_bg_{i}.png"
         make_title_card(png, **card)
@@ -540,6 +690,37 @@ def build_all(output_dir: Path) -> Path:
         play_seg = SEGMENTS / f"03_method_{tag}_play.mp4"
         build_single_video_segment(src_mp4, play_overlay, play_seg, duration_s=18.0, start_s=0.0, speed=3.6)
         plan.append((f"03_method_{tag}_play", play_seg))
+
+    # ----- Section 3d: Selfie vs rendered cursor (6.5s) -----
+    # Side-by-side: the raw front-camera recording on the left, the
+    # video-anchored cursor rendering on the right. Same brushing moment
+    # in both — selfie at t=20 s lines up with the rendered MP4 at
+    # t=20 + 4.99 s (the cross-correlated IMU/video offset). Played at
+    # 1.5x so a 9.75 s window fits in 6.5 s.
+    selfie_overlay = TITLE_CARDS / "03d_selfie_overlay.png"
+    make_two_up_overlay(
+        selfie_overlay,
+        banner_text="Video-based ground truth  -  raw selfie vs. rendered cursor",
+        panel_labels=("Raw front camera", "Rendered cursor (video-anchored)"),
+        panel_captions=(
+            "Hand and brush motion as captured by the phone camera. MediaPipe HandLandmarker extracts the wrist position per frame.",
+            "Cursor driven by that same wrist position, mapped into the mouth viz. Both panels show the same ~10 s brushing moment.",
+        ),
+        **_overlay_kwargs(L2),
+    )
+    selfie_seg = SEGMENTS / "03d_selfie_vs_rendered.mp4"
+    selfie_left_start = 20.0
+    build_two_up_segment(
+        left_src=SELFIE_VIDEO,
+        right_src=METHODS_DIR / "primary_video.mp4",
+        overlay_png=selfie_overlay,
+        output_path=selfie_seg,
+        duration_s=6.5,
+        left_start_s=selfie_left_start,
+        right_start_s=selfie_left_start + VIDEO_IMU_OFFSET_S,
+        speed=1.5,
+    )
+    plan.append(("03d_selfie_vs_rendered", selfie_seg))
 
     # ----- Section 4: Results (80s) -----
     # Title card (5s) then ~75s of 3-up playback on primary log at 1.75x
@@ -591,7 +772,7 @@ def build_all(output_dir: Path) -> Path:
         png = TITLE_CARDS / f"05_os_intro_{i}.png"
         make_title_card(png, **card)
         seg = SEGMENTS / f"05_os_intro_{i}.mp4"
-        png_to_video(png, seg, duration_s=17.5)
+        png_to_video(png, seg, duration_s=12.0)
         plan.append((f"05_os_intro_{i}", seg))
 
     # ----- Section 6: Over-sampling results (~35s) -----
@@ -610,7 +791,7 @@ def build_all(output_dir: Path) -> Path:
         ),
     )
     os_result_seg = SEGMENTS / "06_os_result.mp4"
-    png_to_video(os_result_png, os_result_seg, duration_s=35.0)
+    png_to_video(os_result_png, os_result_seg, duration_s=22.0)
     plan.append(("06_os_result", os_result_seg))
 
     # ----- Appendix: 4 segments, ~52s each (3 logs + primary) -----

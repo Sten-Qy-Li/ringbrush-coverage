@@ -7,131 +7,143 @@
       "duration_s": 5.0
     },
     {
+      "name": "01a_submission",
+      "path": "report_assets\\segments\\01a_submission.mp4",
+      "start_s": 5.0,
+      "duration_s": 8.0
+    },
+    {
       "name": "02_bg_1",
       "path": "report_assets\\segments\\02_bg_1.mp4",
-      "start_s": 5.0,
-      "duration_s": 8.77
+      "start_s": 13.0,
+      "duration_s": 7.0
     },
     {
       "name": "02_bg_2",
       "path": "report_assets\\segments\\02_bg_2.mp4",
-      "start_s": 13.77,
-      "duration_s": 8.77
+      "start_s": 20.0,
+      "duration_s": 7.0
     },
     {
       "name": "02_bg_3",
       "path": "report_assets\\segments\\02_bg_3.mp4",
-      "start_s": 22.54,
-      "duration_s": 8.77
+      "start_s": 27.0,
+      "duration_s": 7.0
     },
     {
       "name": "02_bg_4",
       "path": "report_assets\\segments\\02_bg_4.mp4",
-      "start_s": 31.31,
-      "duration_s": 8.77
+      "start_s": 34.0,
+      "duration_s": 7.0
     },
     {
       "name": "03_method_heuristic_text",
       "path": "report_assets\\segments\\03_method_heuristic_text.mp4",
-      "start_s": 40.08,
+      "start_s": 41.0,
       "duration_s": 9.0
     },
     {
       "name": "03_method_heuristic_play",
       "path": "report_assets\\segments\\03_method_heuristic_play.mp4",
-      "start_s": 49.08,
+      "start_s": 50.0,
       "duration_s": 18.0
     },
     {
       "name": "03_method_aeolus_text",
       "path": "report_assets\\segments\\03_method_aeolus_text.mp4",
-      "start_s": 67.08,
+      "start_s": 68.0,
       "duration_s": 9.0
     },
     {
       "name": "03_method_aeolus_play",
       "path": "report_assets\\segments\\03_method_aeolus_play.mp4",
-      "start_s": 76.08,
+      "start_s": 77.0,
       "duration_s": 18.0
     },
     {
       "name": "03_method_video_text",
       "path": "report_assets\\segments\\03_method_video_text.mp4",
-      "start_s": 94.08,
+      "start_s": 95.0,
       "duration_s": 9.0
     },
     {
       "name": "03_method_video_play",
       "path": "report_assets\\segments\\03_method_video_play.mp4",
-      "start_s": 103.08,
+      "start_s": 104.0,
       "duration_s": 18.0
+    },
+    {
+      "name": "03d_selfie_vs_rendered",
+      "path": "report_assets\\segments\\03d_selfie_vs_rendered.mp4",
+      "start_s": 122.0,
+      "duration_s": 6.5
     },
     {
       "name": "04_results_title",
       "path": "report_assets\\segments\\04_results_title.mp4",
-      "start_s": 121.08,
+      "start_s": 128.5,
       "duration_s": 5.0
     },
     {
       "name": "04_results_3up",
       "path": "report_assets\\segments\\04_results_3up.mp4",
-      "start_s": 126.08,
+      "start_s": 133.5,
       "duration_s": 75.0
     },
     {
       "name": "05_os_intro_1",
       "path": "report_assets\\segments\\05_os_intro_1.mp4",
-      "start_s": 201.08,
-      "duration_s": 17.5
+      "start_s": 208.5,
+      "duration_s": 12.0
     },
     {
       "name": "05_os_intro_2",
       "path": "report_assets\\segments\\05_os_intro_2.mp4",
-      "start_s": 218.58,
-      "duration_s": 17.5
+      "start_s": 220.5,
+      "duration_s": 12.0
     },
     {
       "name": "06_os_result",
       "path": "report_assets\\segments\\06_os_result.mp4",
-      "start_s": 236.08,
-      "duration_s": 35.0
+      "start_s": 232.5,
+      "duration_s": 22.0
     },
     {
       "name": "07_appendix_title",
       "path": "report_assets\\segments\\07_appendix_title.mp4",
-      "start_s": 271.08,
+      "start_s": 254.5,
       "duration_s": 6.0
     },
     {
       "name": "07_appx_primary",
       "path": "report_assets\\segments\\07_appx_primary.mp4",
-      "start_s": 277.08,
+      "start_s": 260.5,
       "duration_s": 75.0
     },
     {
       "name": "07_appx_old_full",
       "path": "report_assets\\segments\\07_appx_old_full.mp4",
-      "start_s": 352.08,
+      "start_s": 335.5,
       "duration_s": 50.0
     },
     {
       "name": "07_appx_updown",
       "path": "report_assets\\segments\\07_appx_updown.mp4",
-      "start_s": 402.08,
+      "start_s": 385.5,
       "duration_s": 16.0
     },
     {
       "name": "07_appx_leftright",
       "path": "report_assets\\segments\\07_appx_leftright.mp4",
-      "start_s": 418.08,
+      "start_s": 401.5,
       "duration_s": 11.0
     },
     {
       "name": "08_outro",
       "path": "report_assets\\segments\\08_outro.mp4",
-      "start_s": 429.08,
+      "start_s": 412.5,
       "duration_s": 4.0
     }
   ],
-  "total_s": 433.08
+  "total_s": 416.5
 }
