@@ -6,7 +6,7 @@ Submitted to the Institute of Computer Science in fulfillment of the requirement
 
  at the University of Tartu, in the spring of 2026.
 
-https://github.com/user-attachments/assets/a515ad8b-cf47-4620-b919-a1f6b2e2105d
+https://github.com/user-attachments/assets/13e0ac8a-ce0f-4071-a721-43946dbc97ab
 
 ---
 
