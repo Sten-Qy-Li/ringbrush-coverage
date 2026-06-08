@@ -22,6 +22,28 @@ python -m pip install -e .
 
 This installs the `ringbrush-coverage` CLI and its `imageio-ffmpeg` dependency.
 
+## How to reproduce
+
+All session and calibration logs used in the report are checked in under [recordings/](recordings/). After installing, reproduce the primary heuristic render with:
+
+```powershell
+ringbrush-coverage "recordings/2026-05-29_2203_full-session-with-video-recording.txt" `
+  --calibration-dir recordings `
+  --output outputs/reproduction.mp4
+```
+
+For the video-anchored render — the one in the final report — the synchronized MediaPipe CSV is already checked in, so step 3 of "Video-anchored dead reckoning" runs straight off the repo:
+
+```powershell
+ringbrush-coverage "recordings/2026-05-29_2203_full-session-with-video-recording.txt" `
+  --calibration-dir recordings `
+  --dr-method video-anchored `
+  --video-sync-csv outputs/2026-05-29_video-sync/synchronized_video_on_imu_time.csv `
+  --output outputs/reproduction-video-anchored.mp4
+```
+
+The raw front-camera MP4 (~157 MB) is **not** committed — it exceeds GitHub's per-file limit. Only the derived `recordings/*_format-3.csv` (MediaPipe hand landmarks) is checked in, which is what the pipeline actually consumes. Re-deriving that CSV with `tools/extract_video_motion.py` requires the raw video, available on request.
+
 ## Generate a video from a sensor log
 
 ### 1. Have a sensor log ready
@@ -114,6 +136,6 @@ For each ~1-second window the app:
 
 ## Notes and limitations
 
-- Defaults are tuned to the sample recordings under `C:\MSc-Computer-Science\Semester-2\pdss\recordings`. Different rings or unusual brushing styles likely need fresh calibration.
+- Defaults are tuned to the bundled sample recordings under [recordings/](recordings/). Different rings or unusual brushing styles likely need fresh calibration.
 - Dead reckoning is damped to keep cursor drift bounded — read it as a visual cue, not a medically precise trajectory.
 - Retrain the heuristic dead-reckoning constants with `python tools\calibrate_dead_reckoning.py` after collecting new labeled left-right / up-down / inside-outside motion logs.
