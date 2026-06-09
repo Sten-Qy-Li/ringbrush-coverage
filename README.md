@@ -12,6 +12,8 @@ https://github.com/user-attachments/assets/13e0ac8a-ce0f-4071-a721-43946dbc97ab
 
 Turn a smart-ring sensor log into an MP4 that shows where someone brushed their teeth. The video renders a stylized mouth, a dead-reckoned brush cursor with a short motion trail, and per-zone coverage bars that fill as each surface is brushed.
 
+> **For developers and engineers:** if you want to extend or modify the project, see the [Developer's README](DEVELOPERS.md) for a feature-by-feature map of where each piece of functionality lives and where to edit it.
+
 ## Install
 
 From the repository root:
