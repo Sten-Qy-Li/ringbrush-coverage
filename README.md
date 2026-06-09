@@ -46,6 +46,91 @@ ringbrush-coverage "recordings/2026-05-29_2203_full-session-with-video-recording
 
 The raw front-camera MP4 (~157 MB) is **not** committed — it exceeds GitHub's per-file limit. Only the derived `recordings/*_format-3.csv` (MediaPipe hand landmarks) is checked in, which is what the pipeline actually consumes. Re-deriving that CSV with `tools/extract_video_motion.py` requires the raw video, available on request.
 
+## Record a sensor log from the smart ring
+
+This section explains how to make your own `.txt` sensor log using the smart ring prototype. You do not need any prior experience with Arduino IDE. Follow the steps in order.
+
+**What you need before you start:**
+
+- A laptop (Windows, macOS, or Linux).
+- An [M5StickC Plus](https://docs.m5stack.com/en/core/m5stickc_plus) controller with a USB-C cable.
+- A smart ring prototype with a BNO055 sensor (this is the small ring you wear on your finger).
+- A mobile phone with a hotspot you can turn on, **or** any Wi-Fi network you control the password for. The M5StickC Plus needs Wi-Fi to start. If it cannot connect, it will keep restarting and will not produce any data.
+
+### 1. Wire the smart ring to the M5StickC Plus
+
+Connect the laptop to the M5StickC Plus with the USB-C cable. Then connect the smart ring to the M5StickC Plus with **four wires**:
+
+| M5StickC Plus pin | Smart ring pin |
+|---|---|
+| `GND` | `GND` |
+| `G26` | `SCL` (also labeled `Rx`) |
+| `G0`  | `SDA` (also labeled `Tx`) |
+| `3V3` | `VIN` |
+
+Double-check the pins before you plug the USB-C cable in. A wrong wire on `3V3` or `GND` can damage the sensor.
+
+### 2. Install the Arduino IDE and the required libraries
+
+1. Download the **Arduino IDE** (version 2.x) from <https://www.arduino.cc/en/software> and install it.
+2. Open the Arduino IDE. Go to **File → Preferences**. In the box called **Additional boards manager URLs**, paste this address and click **OK**:
+   ```
+   https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/arduino/package_m5stack_index.json
+   ```
+3. Open **Tools → Board → Boards Manager**. In the search box, type `M5Stack`. Find the entry called **M5Stack by M5Stack Official** and click **Install**.
+4. Open **Tools → Manage Libraries** (or press `Ctrl+Shift+I`). Install these three libraries one by one:
+   - `M5StickCPlus` (by M5Stack)
+   - `Adafruit BNO055` (by Adafruit)
+   - `Adafruit Unified Sensor` (by Adafruit — Arduino IDE may ask to install this automatically as a dependency of `Adafruit BNO055`. If it asks, click **Install all**.)
+
+### 3. Open the firmware sketch and add your hotspot details
+
+1. In the Arduino IDE, click **File → Open…** and select the file [firmware/bno055_udp_streamer/bno055_udp_streamer.ino](firmware/bno055_udp_streamer/bno055_udp_streamer.ino) from this repository.
+2. Near the top of the file, find this block:
+   ```cpp
+   // ==== Mobile Tethering and/or Hotspot settings ====
+   const char* WIFI_SSID = "Insert your Hotspot SSID here";
+   const char* WIFI_PASS = "Insert your Hotspot password here";
+   ```
+3. Replace the two placeholder strings with the **name** of your mobile hotspot (or Wi-Fi network) and its **password**. Keep the quotation marks.
+4. (Optional) A few lines below, you will see `IPAddress LAPTOP_IP(192, 168, 0, 207);`. You can leave this value as it is for now. The sketch will still write the data to the USB serial port, which is what we read in step 6.
+
+Save the file (`Ctrl+S`).
+
+### 4. Select the board and the port
+
+1. Plug the M5StickC Plus into the laptop with the USB-C cable. A small screen on the device should light up.
+2. In the Arduino IDE, click the board selector dropdown at the top of the window (it usually says **Select Board**). Click **Select other board and port…**.
+3. In the **Boards** list, type `m5stick` and choose **M5StickCPlus**.
+4. In the **Ports** list on the right, choose the port that ends with **(USB)** — for example `COM3 Serial Port (USB)` on Windows, or `/dev/cu.usbserial-…` on macOS / Linux. Click **OK**.
+
+If the port list is empty, unplug the device, wait two seconds, plug it back in, and try again. On Windows you may also need the [CP210x USB driver](https://www.silabs.com/developer-tools/usb-to-uart-bridge-vcp-drivers).
+
+### 5. Upload the sketch to the M5StickC Plus
+
+Click the **Upload** button (the right-arrow icon in the top-left of the Arduino IDE). The IDE will compile the sketch and send it to the M5StickC Plus. This takes about 30–60 seconds the first time. When it is finished, the device screen will show "Connecting to Mobile Hotspot…" and then "Mobile Hotspot connected." once the Wi-Fi is up.
+
+If you see "Failed to connect to Mobile Hotspot, restarting…", check that your hotspot is turned on and that you typed the password correctly in step 3, then re-upload.
+
+### 6. Save the serial output as a `.txt` log
+
+1. Make sure your mobile hotspot is on, and that the M5StickC Plus shows "Mobile Hotspot connected.".
+2. In the Arduino IDE, open **Tools → Serial Monitor** (or press `Ctrl+Shift+M`).
+3. In the Serial Monitor toolbar, change the baud-rate dropdown on the right to **115200 baud**.
+4. You should now see lines like this scrolling past:
+   ```
+   159381,37.50,-84.13,-178.00,-10.360,1.050,-1.500
+   159393,36.81,-83.56,-177.38,-10.870,1.260,-1.340
+   ```
+   Each line is one sample: `t_ms, roll, pitch, yaw, ax, ay, az`. The device produces ~100 lines per second.
+5. **Start brushing.** Wear the smart ring on your finger and brush your teeth as you normally would.
+6. When you are done, **stop the Serial Monitor**, then click the small **copy** icon at the top right of the Serial Monitor window (or select all the text with `Ctrl+A` and copy with `Ctrl+C`).
+7. Open any plain-text editor (Notepad, VS Code, etc.), paste the text, and save it as a file ending in `.txt` — for example `2026-06-09_2030_my-first-session.txt`. Place it anywhere you like; you will pass its path to the CLI in the next section.
+
+That file is your sensor log. You can now feed it to `ringbrush-coverage` exactly as shown in [How to reproduce](#how-to-reproduce) or in the next section.
+
+> **Tip — labeled calibration recordings.** If you also want to retrain the region classifier on yourself (see "Point at labeled calibration logs" in the next section), repeat step 6 once per region while brushing only that region, and save each file with a name that contains the matching marker: `outer-front-only`, `outer-left-only`, `outer-right-only`, `inner-upper-only`, `inner-lower-only`, and `no-movement-idle` (the device sitting still on a table).
+
 ## Generate a video from a sensor log
 
 ### 1. Have a sensor log ready
